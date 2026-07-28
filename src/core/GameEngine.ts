@@ -1,20 +1,19 @@
 import { DominoTile } from './DominoTile';
 
-export type Direction = 'RIGHT' | 'LEFT' | 'DOWN' | 'UP';
-
-export interface BoardEnd {
-    value: number;
-    x: number;
-    y: number;
-    dir: Direction;
-}
+export type Dir = 'RIGHT' | 'LEFT' | 'DOWN' | 'UP';
 
 export interface PlacedTile {
-    sideA: number;
-    sideB: number;
+    inVal: number; outVal: number;
+    x: number; y: number; w: number; h: number;
+    inX: number; inY: number; outX: number; outY: number;
+    isLineHorizontal: boolean;
+}
+
+export interface EndPoint {
+    val: number;
     x: number;
     y: number;
-    isVertical: boolean;
+    dir: Dir;
 }
 
 export class GameEngine {
@@ -22,13 +21,11 @@ export class GameEngine {
     public playerHand: DominoTile[] = [];
     public aiHand: DominoTile[] = [];
     public placedTiles: PlacedTile[] = [];
-    public leftEnd: BoardEnd | null = null;
-    public rightEnd: BoardEnd | null = null;
+    public leftEnd: EndPoint | null = null;
+    public rightEnd: EndPoint | null = null;
     public isPlayerTurn: boolean = true;
 
-    constructor() {
-        this.init();
-    }
+    constructor() { this.init(); }
 
     public init() {
         this.boneyard = [];
@@ -59,94 +56,115 @@ export class GameEngine {
         }
     }
 
+    public canPlayerPlay(): boolean {
+        if (this.placedTiles.length === 0) return true;
+        for (const tile of this.playerHand) {
+            if ((this.leftEnd && tile.hasValue(this.leftEnd.val)) || 
+                (this.rightEnd && tile.hasValue(this.rightEnd.val))) return true;
+        }
+        return false;
+    }
+
+    public playerDraw(): boolean {
+        if (this.boneyard.length > 0) {
+            this.playerHand.push(this.boneyard.pop()!);
+            return true;
+        }
+        return false;
+    }
+
     public playTile(tile: DominoTile, side: 'left' | 'right'): boolean {
-        // أول قطعة توضع في المنتصف
+        const LONG = 60, SHORT = 30;
+        
         if (this.placedTiles.length === 0) {
-            const startX = 360, startY = 280; 
-            this.placedTiles.push({ sideA: tile.sideA, sideB: tile.sideB, x: startX, y: startY, isVertical: false });
-            this.leftEnd = { value: tile.sideA, x: startX, y: 300, dir: 'LEFT' };
-            this.rightEnd = { value: tile.sideB, x: startX + 80, y: 300, dir: 'RIGHT' };
+            const isDouble = tile.sideA === tile.sideB;
+            const w = isDouble ? SHORT : LONG;
+            const h = isDouble ? LONG : SHORT;
+            const x = 400 - w / 2;
+            const y = 250 - h / 2;
+            
+            const pt: PlacedTile = {
+                inVal: tile.sideA, outVal: tile.sideB, x, y, w, h,
+                inX: x + w/2, inY: y + h/2, outX: x + w/2, outY: y + h/2,
+                isLineHorizontal: !isDouble
+            };
+            this.placedTiles.push(pt);
+            this.leftEnd = { val: tile.sideA, x: x, y: 250, dir: 'LEFT' };
+            this.rightEnd = { val: tile.sideB, x: x + w, y: 250, dir: 'RIGHT' };
             return true;
         }
 
-        const end = side === 'left' ? this.leftEnd : this.rightEnd;
-        if (!end) return false;
-
-        // منطق القلب (أي رقم سيكون للداخل وأي رقم للخارج)
-        let inVal: number = -1;
-        let outVal: number = -1;
-        
-        if (tile.sideA === end.value) { inVal = tile.sideA; outVal = tile.sideB; }
-        else if (tile.sideB === end.value) { inVal = tile.sideB; outVal = tile.sideA; }
+        const end = side === 'left' ? this.leftEnd! : this.rightEnd!;
+        let inVal, outVal;
+        if (tile.sideA === end.val) { inVal = tile.sideA; outVal = tile.sideB; }
+        else if (tile.sideB === end.val) { inVal = tile.sideB; outVal = tile.sideA; }
         else return false;
 
-        const W = 80, H = 40; // أبعاد القطعة الأفقية
-        let px: number = 0;
-        let py: number = 0;
-        let isVertical = false;
-        let newDir = end.dir;
+        const isDouble = (inVal === outVal);
+        let x: number = 0, y: number = 0, w: number = 0, h: number = 0;
+        let newDir: Dir = end.dir;
 
-        // خوارزمية الالتفاف (Snaking)
+        // حساب الحدود وإحداثيات القطعة الجديدة
         if (end.dir === 'RIGHT') {
-            px = end.x; py = end.y - H / 2;
-            if (px + W > 760) { isVertical = true; px = end.x - H / 2; py = end.y; newDir = 'DOWN'; } // انعطاف للأسفل
+            w = isDouble ? SHORT : LONG; h = isDouble ? LONG : SHORT;
+            x = end.x; y = end.y - h / 2;
+            if (x + w > 750) { w = SHORT; h = LONG; x = end.x - w/2; y = end.y; newDir = 'DOWN'; }
         } else if (end.dir === 'LEFT') {
-            px = end.x - W; py = end.y - H / 2;
-            if (px < 40) { isVertical = true; px = end.x - H / 2; py = end.y - W; newDir = 'UP'; } // انعطاف للأعلى
+            w = isDouble ? SHORT : LONG; h = isDouble ? LONG : SHORT;
+            x = end.x - w; y = end.y - h / 2;
+            if (x < 50) { w = SHORT; h = LONG; x = end.x - w/2; y = end.y - h; newDir = 'UP'; }
         } else if (end.dir === 'DOWN') {
-            isVertical = true; px = end.x - H / 2; py = end.y;
-            if (py + W > 560) { isVertical = false; px = end.x - W; py = end.y - H / 2; newDir = 'LEFT'; } // انعطاف لليسار
+            w = isDouble ? LONG : SHORT; h = isDouble ? SHORT : LONG;
+            x = end.x - w / 2; y = end.y;
+            if (y + h > 450) { w = LONG; h = SHORT; x = end.x - w; y = end.y - h/2; newDir = 'LEFT'; }
         } else if (end.dir === 'UP') {
-            isVertical = true; px = end.x - H / 2; py = end.y - W;
-            if (py < 40) { isVertical = false; px = end.x; py = end.y - H / 2; newDir = 'RIGHT'; } // انعطاف لليمين
+            w = isDouble ? LONG : SHORT; h = isDouble ? SHORT : LONG;
+            x = end.x - w / 2; y = end.y - h;
+            if (y < 50) { w = LONG; h = SHORT; x = end.x; y = end.y - h/2; newDir = 'RIGHT'; }
         }
 
-        this.placedTiles.push({ sideA: inVal, sideB: outVal, x: px, y: py, isVertical });
+        // تحديد نقاط الرسم (أين يُرسم الرقم الداخلي والخارجي)
+        let inX = 0, inY = 0, outX = 0, outY = 0;
+        let isLineHorizontal = false;
 
-        // تحديث الإحداثيات للقطعة القادمة
-        let newEnd: BoardEnd;
-        if (newDir === 'RIGHT') newEnd = { value: outVal, x: px + (isVertical ? H : W), y: py + H/2, dir: 'RIGHT' };
-        else if (newDir === 'LEFT') newEnd = { value: outVal, x: px, y: py + H/2, dir: 'LEFT' };
-        else if (newDir === 'DOWN') newEnd = { value: outVal, x: px + H/2, y: py + (isVertical ? W : H), dir: 'DOWN' };
-        else newEnd = { value: outVal, x: px + H/2, y: py, dir: 'UP' };
+        if (newDir === 'RIGHT') {
+            isLineHorizontal = false; inX = x + w/4; inY = y + h/2; outX = x + 3*w/4; outY = y + h/2;
+        } else if (newDir === 'LEFT') {
+            isLineHorizontal = false; inX = x + 3*w/4; inY = y + h/2; outX = x + w/4; outY = y + h/2;
+        } else if (newDir === 'DOWN') {
+            isLineHorizontal = true; inX = x + w/2; inY = y + h/4; outX = x + w/2; outY = y + 3*h/4;
+        } else if (newDir === 'UP') {
+            isLineHorizontal = true; inX = x + w/2; inY = y + 3*h/4; outX = x + w/2; outY = y + h/4;
+        }
 
+        this.placedTiles.push({ inVal, outVal, x, y, w, h, inX, inY, outX, outY, isLineHorizontal });
+
+        // تحديث الطرف الجديد للطاولة
+        let newEndX = 0, newEndY = 0;
+        if (newDir === 'RIGHT') { newEndX = x + w; newEndY = y + h/2; }
+        else if (newDir === 'LEFT') { newEndX = x; newEndY = y + h/2; }
+        else if (newDir === 'DOWN') { newEndX = x + w/2; newEndY = y + h; }
+        else if (newDir === 'UP') { newEndX = x + w/2; newEndY = y; }
+
+        const newEnd = { val: outVal, x: newEndX, y: newEndY, dir: newDir };
         if (side === 'left') this.leftEnd = newEnd; else this.rightEnd = newEnd;
+        
         return true;
     }
 
     public aiTurn(): boolean {
         for (let i = 0; i < this.aiHand.length; i++) {
             const tile = this.aiHand[i];
-            if (this.rightEnd && tile.hasValue(this.rightEnd.value)) {
+            if (this.rightEnd && tile.hasValue(this.rightEnd.val)) {
                 if (this.playTile(tile, 'right')) { this.aiHand.splice(i, 1); return true; }
             }
-            if (this.leftEnd && tile.hasValue(this.leftEnd.value)) {
+            if (this.leftEnd && tile.hasValue(this.leftEnd.val)) {
                 if (this.playTile(tile, 'left')) { this.aiHand.splice(i, 1); return true; }
             }
         }
         if (this.boneyard.length > 0) {
             this.aiHand.push(this.boneyard.pop()!);
             return this.aiTurn();
-        }
-        return false;
-    }
-    // دالة للتحقق إذا كان اللاعب يملك قطعة صالحة للعب
-    public canPlayerPlay(): boolean {
-        if (this.placedTiles.length === 0) return true;
-        for (const tile of this.playerHand) {
-            if ((this.leftEnd && tile.hasValue(this.leftEnd.value)) || 
-                (this.rightEnd && tile.hasValue(this.rightEnd.value))) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    // دالة لسحب قطعة من الكومة للاعب
-    public playerDraw(): boolean {
-        if (this.boneyard.length > 0) {
-            this.playerHand.push(this.boneyard.pop()!);
-            return true;
         }
         return false;
     }
