@@ -116,30 +116,30 @@ export class GameEngine {
         else if (dir === 'DOWN') { x = end.x - w / 2; y = end.y; }
         else if (dir === 'UP') { x = end.x - w / 2; y = end.y - h; }
 
-        // خوارزمية الانعطاف الديناميكية (Dynamic Corner Alignment)
-        // نحصل على القطعة السابقة لمعرفة أبعادها الحقيقية (عادية أو مزدوجة)
+        // خوارزمية الانعطاف المثالية (Centered Corner Alignment)
+        // محاذاة مركز القطعة الجديدة مع منتصف الحافة الخارجية للقطعة السابقة لمنع أي انزياح
         const prevTile = side === 'left' ? this.placedTiles[0] : this.placedTiles[this.placedTiles.length - 1];
 
         if (dir === 'RIGHT' && x + w > MAX_X) {
             dir = 'DOWN';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
-            x = end.x - w; 
-            y = end.y + prevTile.h / 2; // الإزاحة بناءً على ارتفاع القطعة السابقة
+            x = end.x - w / 2; 
+            y = end.y + prevTile.h / 2; 
         } else if (dir === 'LEFT' && x < MIN_X) {
             dir = 'UP';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
-            x = end.x; 
+            x = end.x - w / 2; 
             y = end.y - h - prevTile.h / 2; 
         } else if (dir === 'DOWN' && y + h > MAX_Y) {
             dir = 'LEFT';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
-            x = end.x - w - prevTile.w / 2; // الإزاحة بناءً على عرض القطعة السابقة
-            y = end.y - h;
+            x = end.x - w - prevTile.w / 2; 
+            y = end.y - h / 2;
         } else if (dir === 'UP' && y < MIN_Y) {
             dir = 'RIGHT';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
             x = end.x + prevTile.w / 2; 
-            y = end.y;
+            y = end.y - h / 2;
         }
 
         const pt = this.createPlacedTile(x, y, w, h, dir, inVal, outVal);
