@@ -38,7 +38,6 @@ function drawDots(ctx: CanvasRenderingContext2D, value: number, cx: number, cy: 
 
 function drawPlacedTile(t: PlacedTile, highlight: boolean = false) {
     if (highlight) {
-        // إضاءة خضراء ساطعة للأطراف الصالحة
         ctx.fillStyle = "rgba(0, 255, 0, 0.5)";
         ctx.fillRect(t.x - 6, t.y - 6, t.w + 12, t.h + 12);
     }
@@ -79,36 +78,30 @@ function drawTileRaw(tile: DominoTile, x: number, y: number, w: number, h: numbe
     drawDots(ctx, tile.sideB, x + w/2, y + (h/4)*3, scale);
 }
 
-// حلقة الرسم المستمرة (Game Loop)
 function gameLoop() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // 1. رسم القطع على الطاولة مع إبراز الأطراف الصالحة عند السحب
     engine.placedTiles.forEach((t, index) => {
         let highlight = false;
         if (isDragging && draggingTile) {
             const isFirst = index === 0;
             const isLast = index === engine.placedTiles.length - 1;
-            // يضيء الطرف الأيسر إذا كانت القطعة تطابقه
             if (isFirst && engine.leftEnd && draggingTile.hasValue(engine.leftEnd.val)) highlight = true;
-            // يضيء الطرف الأيمن إذا كانت القطعة تطابقه
             if (isLast && engine.rightEnd && draggingTile.hasValue(engine.rightEnd.val)) highlight = true;
         }
         drawPlacedTile(t, highlight);
     });
 
-    // 2. رسم الإحصائيات
     ctx.fillStyle = "white";
     ctx.font = "16px sans-serif";
     ctx.textAlign = "left";
     ctx.fillText(`يدك: ${engine.playerHand.length} | يد الخصم: ${engine.aiHand.length} | الكومة: ${engine.boneyard.length}`, 10, 20);
 
-    // 3. رسم يد اللاعب
     const handCount = engine.playerHand.length;
     let handX = (800 - (handCount * 60)) / 2;
     
     engine.playerHand.forEach((tile, index) => {
-        if (index === draggingIndex) return; // تخطي القطعة التي يتم سحبها
+        if (index === draggingIndex) return;
 
         tile.x = handX;
         tile.y = 490;
@@ -119,7 +112,6 @@ function gameLoop() {
         handX += 60; 
     });
 
-    // 4. رسم القطعة المسحوبة (تتبع الماوس بحجم أكبر مع ظل)
     if (isDragging && draggingTile) {
         ctx.shadowColor = "rgba(0,0,0,0.6)";
         ctx.shadowBlur = 15;
@@ -133,8 +125,7 @@ function gameLoop() {
         ctx.shadowOffsetY = 0;
     }
 
-    // 5. منطق زر السحب
-    let msg = engine.isPlayerTurn ? "اسحب قطعة وأفلتها في الملعب قرب الطرف المضيء بالأخضر" : "الذكاء الاصطناعي يفكر...";
+    let msg = engine.isPlayerTurn ? "اسحب قطعة وأفلتها في أي مكان قرب الطرف المضيء بالأخضر" : "الذكاء الاصطناعي يفكر...";
     
     const needsToDrawOrPass = engine.isPlayerTurn && !engine.canPlayerPlay();
     if (needsToDrawOrPass) {
@@ -155,29 +146,26 @@ function gameLoop() {
     }
     info.innerText = msg;
 
-    requestAnimationFrame(gameLoop); // استمرار حلقة الرسم
+    requestAnimationFrame(gameLoop);
 }
 
 // --- أحداث الماوس واللمس ---
 
-function handleStart(e: MouseEvent | TouchEvent) {
-    if (!engine.isPlayerTurn) return;
-    
+function getCoords(e: MouseEvent | TouchEvent): {x: number, y: number} {
     const rect = canvas.getBoundingClientRect();
-    let clientX = 0, clientY = 0;
-
     if (e instanceof TouchEvent) {
-        clientX = e.touches[0].clientX;
-        clientY = e.touches[0].clientY;
+        return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
     } else {
-        clientX = e.clientX;
-        clientY = e.clientY;
+        return { x: e.clientX - rect.left, y: e.clientY - rect.top };
     }
+}
 
-    mouseX = clientX - rect.left;
-    mouseY = clientY - rect.top;
+function handleStart(e: MouseEvent | TouchEvent) {
+    if (!engine.isPlayerTurn || isDragging) return;
+    
+    const {x, y} = getCoords(e);
+    mouseX = x; mouseY = y;
 
-    // فحص زر السحب
     if (mouseX >= drawBtnX && mouseX <= drawBtnX + drawBtnW && mouseY >= drawBtnY && mouseY <= drawBtnY + drawBtnH) {
         if (!engine.canPlayerPlay()) {
             if (engine.playerDraw()) {} else { engine.isPlayerTurn = false; endTurn(); }
@@ -185,7 +173,6 @@ function handleStart(e: MouseEvent | TouchEvent) {
         return;
     }
 
-    // فحص مسك قطعة من اليد
     for (let i = 0; i < engine.playerHand.length; i++) {
         const tile = engine.playerHand[i];
         if (mouseX >= tile.x && mouseX <= tile.x + tile.width && mouseY >= tile.y && mouseY <= tile.y + tile.height) {
@@ -199,49 +186,35 @@ function handleStart(e: MouseEvent | TouchEvent) {
 
 function handleMove(e: MouseEvent | TouchEvent) {
     if (!isDragging) return;
-    e.preventDefault(); // منع تمرير الصفحة على الهاتف
+    e.preventDefault();
     
-    const rect = canvas.getBoundingClientRect();
-    if (e instanceof TouchEvent) {
-        mouseX = e.touches[0].clientX - rect.left;
-        mouseY = e.touches[0].clientY - rect.top;
-    } else {
-        mouseX = e.clientX - rect.left;
-        mouseY = e.clientY - rect.top;
-    }
+    const {x, y} = getCoords(e);
+    mouseX = x; mouseY = y;
 }
 
 function handleEnd(e: MouseEvent | TouchEvent) {
     if (!isDragging || !draggingTile) return;
 
     let played = false;
-    
-    // منطق الإفلات الجديد المغفل (Foolproof):
-    // طالما أن اللاعب أفلت القطعة في النصف العلوي من الشاشة (في الملعب)
-    if (mouseY < 450) {
-        const rEnd = engine.rightEnd;
-        const lEnd = engine.leftEnd;
-        let tryRightFirst = true;
+    const rEnd = engine.rightEnd;
+    const lEnd = engine.leftEnd;
+    let tryRightFirst = true;
 
-        // نحدد أي طرف هو الأقرب لمكان الإفلات
-        if (rEnd && lEnd) {
-            const distRight = Math.hypot(mouseX - rEnd.x, mouseY - rEnd.y);
-            const distLeft = Math.hypot(mouseX - lEnd.x, mouseY - lEnd.y);
-            tryRightFirst = distRight < distLeft;
-        }
-
-        // نحاول اللعب في الطرف الأقرب
-        if (tryRightFirst) {
-            played = engine.playTile(draggingTile, 'right');
-            // إذا لم ينجح، نحاول الطرف الآخر فوراً
-            if (!played) played = engine.playTile(draggingTile, 'left');
-        } else {
-            played = engine.playTile(draggingTile, 'left');
-            if (!played) played = engine.playTile(draggingTile, 'right');
-        }
+    if (rEnd && lEnd) {
+        const distRight = Math.hypot(mouseX - rEnd.x, mouseY - rEnd.y);
+        const distLeft = Math.hypot(mouseX - lEnd.x, mouseY - lEnd.y);
+        tryRightFirst = distRight < distLeft;
     }
 
-    // إذا تم اللعب بنجاح، نزيلها من اليد وننهي الدور
+    // محاولة اللعب في الطرف الأقرب، وإذا فشل يحاول الطرف الآخر
+    if (tryRightFirst) {
+        played = engine.playTile(draggingTile, 'right');
+        if (!played) played = engine.playTile(draggingTile, 'left');
+    } else {
+        played = engine.playTile(draggingTile, 'left');
+        if (!played) played = engine.playTile(draggingTile, 'right');
+    }
+
     if (played) {
         engine.playerHand.splice(draggingIndex, 1);
         endTurn();
@@ -253,15 +226,15 @@ function handleEnd(e: MouseEvent | TouchEvent) {
     draggingIndex = -1;
 }
 
-// ربط الأحداث للماوس
+// أحداث البدء ترتبط بالـ Canvas فقط
 canvas.addEventListener('mousedown', handleStart);
-canvas.addEventListener('mousemove', handleMove);
-canvas.addEventListener('mouseup', handleEnd);
-
-// ربط الأحداث للشاشات اللمسية (الهواتف)
 canvas.addEventListener('touchstart', handleStart);
-canvas.addEventListener('touchmove', handleMove);
-canvas.addEventListener('touchend', handleEnd);
+
+// أحداث الحركة والإفلات ترتبط بـ window لضمان التقاطها حتى لو خرج الماوس من اللعبة
+window.addEventListener('mousemove', handleMove);
+window.addEventListener('mouseup', handleEnd);
+window.addEventListener('touchmove', handleMove, { passive: false });
+window.addEventListener('touchend', handleEnd);
 
 function endTurn() {
     if (engine.playerHand.length === 0) { alert("لقد فزت!"); return; }
@@ -273,5 +246,4 @@ function endTurn() {
     }, 1500);
 }
 
-// بدء حلقة اللعبة
 gameLoop();
