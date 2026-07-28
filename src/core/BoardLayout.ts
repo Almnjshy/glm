@@ -47,7 +47,6 @@ export class BoardLayout {
 
         const end = side === 'left' ? this.leftEnd! : this.rightEnd!;
         
-        // التصحيح المنطقي: inVal يجب أن يكون هو الرقم المطابق لطرف الطاولة
         let inVal, outVal;
         if (tile.sideA === end.val) { inVal = tile.sideA; outVal = tile.sideB; }
         else if (tile.sideB === end.val) { inVal = tile.sideB; outVal = tile.sideA; }
@@ -65,27 +64,28 @@ export class BoardLayout {
         else if (dir === 'DOWN') { x = end.x - w / 2; y = end.y; }
         else if (dir === 'UP') { x = end.x - w / 2; y = end.y - h; }
 
-        // خوارزمية الانعطاف الصارمة
+        // المعادلات الهندسية الصارمة للانعطاف (Strict Edge Alignment)
+        // نحاذي الحواف الخارجية لمنع أي انزياح أو تداخل
         if (dir === 'RIGHT' && x + w > MAX_X) {
             dir = 'DOWN';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
-            x = end.x - w / 2; 
-            y = end.y + end.parentH / 2; 
+            x = end.x;  // محاذاة الحافة اليسرى للجديدة مع الحافة اليمنى للقديمة
+            y = end.y - end.parentH / 2; // محاذاة الحافة العلوية
         } else if (dir === 'LEFT' && x < MIN_X) {
             dir = 'UP';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
-            x = end.x - w / 2; 
-            y = end.y - h - end.parentH / 2; 
+            x = end.x - w; // محاذاة الحافة اليمنى للجديدة مع الحافة اليسرى للقديمة
+            y = end.y - h + end.parentH / 2; // محاذاة الحافة السفلية
         } else if (dir === 'DOWN' && y + h > MAX_Y) {
             dir = 'LEFT';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
-            x = end.x - w - end.parentW / 2; 
-            y = end.y - h / 2;
+            x = end.x - w + end.parentW / 2; // محاذاة الحافة اليمنى
+            y = end.y; // محاذاة الحافة العلوية للجديدة مع الحافة السفلية للقديمة
         } else if (dir === 'UP' && y < MIN_Y) {
             dir = 'RIGHT';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
-            x = end.x + end.parentW / 2; 
-            y = end.y - h / 2;
+            x = end.x; // محاذاة الحافة اليسرى
+            y = end.y - h; // محاذاة الحافة السفلية للجديدة مع الحافة العلوية للقديمة
         }
 
         this.pushRenderTile(tile, x, y, w, h, dir, inVal, outVal);
