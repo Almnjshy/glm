@@ -12,7 +12,6 @@ export interface RenderTile {
 
 export interface EndPoint {
     val: number; x: number; y: number; dir: Dir;
-    parentH: number; parentW: number;
 }
 
 export class BoardLayout {
@@ -40,8 +39,8 @@ export class BoardLayout {
             const x = 400 - w / 2;
             const y = 240 - h / 2;
             this.pushRenderTile(tile, x, y, w, h, 'RIGHT', tile.sideA, tile.sideB);
-            this.leftEnd = { val: tile.sideA, x: x, y: y + h / 2, dir: 'LEFT', parentH: h, parentW: w };
-            this.rightEnd = { val: tile.sideB, x: x + w, y: y + h / 2, dir: 'RIGHT', parentH: h, parentW: w };
+            this.leftEnd = { val: tile.sideA, x: x, y: y + h / 2, dir: 'LEFT' };
+            this.rightEnd = { val: tile.sideB, x: x + w, y: y + h / 2, dir: 'RIGHT' };
             return true;
         }
 
@@ -58,45 +57,46 @@ export class BoardLayout {
         let w = dims.w, h = dims.h;
         let x = 0, y = 0;
 
-        // الموضع الافتراضي (استقامة الخط)
+        // 1. الموضع الافتراضي (استقامة الخط)
         if (dir === 'RIGHT') { x = end.x; y = end.y - h / 2; }
         else if (dir === 'LEFT') { x = end.x - w; y = end.y - h / 2; }
         else if (dir === 'DOWN') { x = end.x - w / 2; y = end.y; }
         else if (dir === 'UP') { x = end.x - w / 2; y = end.y - h; }
 
-        // خوارزمية الانعطاف الصارمة (Perfect Half-Overlap L-Shape)
+        // 2. الانعطاف القياسي العالمي (Standard 15x15 Corner Overlap)
+        // المحاذاة تتم بناءً على مركز الحافة المكشوفة لضمان اتصال النقاط بصرياً
         if (dir === 'RIGHT' && x + w > MAX_X) {
             dir = 'DOWN';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
             x = end.x - w / 2; 
-            y = end.y + end.parentH / 2; 
+            y = end.y; 
         } else if (dir === 'LEFT' && x < MIN_X) {
             dir = 'UP';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
             x = end.x - w / 2; 
-            y = end.y - h - end.parentH / 2; 
+            y = end.y - h; 
         } else if (dir === 'DOWN' && y + h > MAX_Y) {
             dir = 'LEFT';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
-            x = end.x - w / 2; // تم تصحيح الانزياح هنا
+            x = end.x - w; 
             y = end.y - h / 2;
         } else if (dir === 'UP' && y < MIN_Y) {
             dir = 'RIGHT';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
-            x = end.x - w / 2; // وتصحيح الانزياح هنا
+            x = end.x; 
             y = end.y - h / 2;
         }
 
         this.pushRenderTile(tile, x, y, w, h, dir, inVal, outVal);
 
-        // تحديث الأطراف
+        // 3. تحديث الأطراف
         let newEndX = 0, newEndY = 0;
         if (dir === 'RIGHT') { newEndX = x + w; newEndY = y + h / 2; }
         else if (dir === 'LEFT') { newEndX = x; newEndY = y + h / 2; }
         else if (dir === 'DOWN') { newEndX = x + w / 2; newEndY = y + h; }
         else if (dir === 'UP') { newEndX = x + w / 2; newEndY = y; }
 
-        const newEnd = { val: outVal, x: newEndX, y: newEndY, dir, parentH: h, parentW: w };
+        const newEnd = { val: outVal, x: newEndX, y: newEndY, dir };
         if (side === 'left') this.leftEnd = newEnd; else this.rightEnd = newEnd;
         return true;
     }
@@ -115,7 +115,7 @@ export class BoardLayout {
             dot2X = x + w/2; dot2Y = y + 3*h/4; // الأسفل
         }
 
-        // تبديل النقاط إذا كان الاتجاه معاكساً ليكون الرقم الداخلي دائماً باتجاه الطاولة
+        // تبديل النقاط ليكون الرقم الداخلي دائماً باتجاه الطاولة
         if (dir === 'LEFT' || dir === 'UP') {
             let tmpX = dot1X, tmpY = dot1Y;
             dot1X = dot2X; dot1Y = dot2Y;
