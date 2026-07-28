@@ -1,5 +1,5 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  base: './', // مهم جداً لكي تعمل اللعبة على GitHub Pages
+  base: './', // هذا السطر هو السحر الذي يجعل اللعبة تعمل على GitHub Pages
 });
