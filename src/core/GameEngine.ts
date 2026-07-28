@@ -81,7 +81,6 @@ export class GameEngine {
 
     public playTile(tile: DominoTile, side: 'left' | 'right'): boolean {
         const MAX_X = 720, MIN_X = 80, MAX_Y = 420, MIN_Y = 80;
-        const L = 60, W = 30;
 
         // أول قطعة
         if (this.placedTiles.length === 0) {
@@ -116,29 +115,27 @@ export class GameEngine {
         else if (dir === 'DOWN') { x = end.x - w / 2; y = end.y; }
         else if (dir === 'UP') { x = end.x - w / 2; y = end.y - h; }
 
-        // خوارزمية الانعطاف المثالية (Centered Corner Alignment)
-        // محاذاة مركز القطعة الجديدة مع منتصف الحافة الخارجية للقطعة السابقة لمنع أي انزياح
-        const prevTile = side === 'left' ? this.placedTiles[0] : this.placedTiles[this.placedTiles.length - 1];
-
+        // المعادلة الهندسية الصارمة للانعطاف (Perfect L-Shape)
+        // تعتمد حصرياً على مركز الحافة المكشوفة (end.x, end.y) لضمان عدم وجود أي انزياح
         if (dir === 'RIGHT' && x + w > MAX_X) {
             dir = 'DOWN';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
             x = end.x - w / 2; 
-            y = end.y + prevTile.h / 2; 
+            y = end.y; 
         } else if (dir === 'LEFT' && x < MIN_X) {
             dir = 'UP';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
             x = end.x - w / 2; 
-            y = end.y - h - prevTile.h / 2; 
+            y = end.y - h; 
         } else if (dir === 'DOWN' && y + h > MAX_Y) {
             dir = 'LEFT';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
-            x = end.x - w - prevTile.w / 2; 
+            x = end.x - w; 
             y = end.y - h / 2;
         } else if (dir === 'UP' && y < MIN_Y) {
             dir = 'RIGHT';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
-            x = end.x + prevTile.w / 2; 
+            x = end.x; 
             y = end.y - h / 2;
         }
 
