@@ -38,7 +38,7 @@ function drawPlacedTile(t: PlacedTile) {
     ctx.fillRect(t.x, t.y, t.w, t.h);
     ctx.strokeRect(t.x, t.y, t.w, t.h);
 
-    // رسم الخط الفاصل بناءً على الاتجاه الهندسي الصحيح
+    // رسم الخط الفاصل
     ctx.beginPath();
     if (t.isVerticalLine) {
         ctx.moveTo(t.x + t.w / 2, t.y);
@@ -49,9 +49,9 @@ function drawPlacedTile(t: PlacedTile) {
     }
     ctx.stroke();
 
-    // رسم النقاط في المراكز المحسوبة بدقة
-    drawDots(ctx, t.inVal, t.inX, t.inY, 1);
-    drawDots(ctx, t.outVal, t.outX, t.outY, 1);
+    // رسم النقاط في المراكز المحسوبة
+    drawDots(ctx, t.inVal, t.dot1X, t.dot1Y, 1);
+    drawDots(ctx, t.outVal, t.dot2X, t.dot2Y, 1);
 }
 
 function draw() {
@@ -66,9 +66,9 @@ function draw() {
     ctx.textAlign = "left";
     ctx.fillText(`يدك: ${engine.playerHand.length} | يد الخصم: ${engine.aiHand.length} | الكومة: ${engine.boneyard.length}`, 10, 20);
 
-    // 3. رسم يد اللاعب (7 قطع في المنتصف بالأسفل)
+    // 3. رسم يد اللاعب
     const handCount = engine.playerHand.length;
-    let handX = (800 - (handCount * 60)) / 2; // توسيط القطع
+    let handX = (800 - (handCount * 60)) / 2;
     
     engine.playerHand.forEach((tile, index) => {
         tile.x = handX;
@@ -98,7 +98,7 @@ function draw() {
         handX += 60; 
     });
 
-    // 4. منطق زر السحب / التمرير
+    // 4. منطق زر السحب
     let msg = engine.isPlayerTurn ? "دورك: اختر قطعة، ثم انقر يمين الشاشة (لليمين) أو يسار الشاشة (لليسار)" : "الذكاء الاصطناعي يفكر...";
     
     const needsToDrawOrPass = engine.isPlayerTurn && !engine.canPlayerPlay();
@@ -132,7 +132,7 @@ canvas.addEventListener('click', (e) => {
     if (x >= drawBtnX && x <= drawBtnX + drawBtnW && y >= drawBtnY && y <= drawBtnY + drawBtnH) {
         if (!engine.canPlayerPlay()) {
             if (engine.playerDraw()) {
-                draw(); // تم السحب، تحديث الشاشة
+                draw();
             } else {
                 engine.isPlayerTurn = false;
                 endTurn();
@@ -151,7 +151,7 @@ canvas.addEventListener('click', (e) => {
         }
     }
 
-    // التحقق من محاولة اللعب يميناً أو يساراً
+    // التحقق من محاولة اللعب
     if (selectedTileIndex !== -1) {
         const tile = engine.playerHand[selectedTileIndex];
         let played = false;
