@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>لعبة الدومينو</title>
+  <style>
+    body { margin: 0; background-color: #1a472a; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; font-family: sans-serif; }
+    canvas { background-color: #2d6a4f; box-shadow: 0 0 20px rgba(0,0,0,0.5); cursor: pointer; }
+    #info { position: absolute; top: 10px; color: white; font-size: 20px; text-align: center; width: 100%; }
+  </style>
+</head>
+<body>
+  <div id="info">دور اللاعب</div>
+  <canvas id="gameCanvas" width="800" height="600"></canvas>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
