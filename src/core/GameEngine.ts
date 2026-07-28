@@ -116,28 +116,28 @@ export class GameEngine {
         else if (dir === 'DOWN') { x = end.x - w / 2; y = end.y; }
         else if (dir === 'UP') { x = end.x - w / 2; y = end.y - h; }
 
-        // خوارزمية الانعطاف الصارمة (L-Shape Perfect Alignment)
-        // يتم حساب الزاوية بحيث تلامس القطعة الجديدة حافة القطعة القديمة وتشكل زاوية 90 درجة
+        // خوارزمية الانعطاف الصارمة (Corner Alignment)
+        // يتم محاذاة حواف القطعة الجديدة مع حواف القطعة السابقة لتشكل زاوية 90 درجة مثالية
         if (dir === 'RIGHT' && x + w > MAX_X) {
             dir = 'DOWN';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
-            x = end.x; 
+            x = end.x - w; 
             y = end.y - W_HALF; 
         } else if (dir === 'LEFT' && x < MIN_X) {
             dir = 'UP';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
-            x = end.x - w; 
-            y = end.y - L + W_HALF; 
+            x = end.x; 
+            y = end.y - h + W_HALF; 
         } else if (dir === 'DOWN' && y + h > MAX_Y) {
             dir = 'LEFT';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
-            x = end.x - L + W_HALF; 
-            y = end.y;
+            x = end.x - w + W_HALF; 
+            y = end.y - h;
         } else if (dir === 'UP' && y < MIN_Y) {
             dir = 'RIGHT';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
             x = end.x - W_HALF; 
-            y = end.y - h;
+            y = end.y;
         }
 
         const pt = this.createPlacedTile(x, y, w, h, dir, inVal, outVal);
@@ -160,7 +160,6 @@ export class GameEngine {
         let dot1X = 0, dot1Y = 0, dot2X = 0, dot2Y = 0;
         let isVerticalLine = false;
 
-        // حساب مراكز النقاط بدقة
         if (w > h) { // قطعة أفقية
             isVerticalLine = true;
             dot1X = x + w/4; dot1Y = y + h/2;
@@ -171,7 +170,6 @@ export class GameEngine {
             dot2X = x + w/2; dot2Y = y + 3*h/4;
         }
 
-        // تبديل النقاط إذا كان الاتجاه معاكساً ليكون الرقم الداخلي دائماً باتجاه الطاولة
         if (dir === 'LEFT' || dir === 'UP') {
             let tmpX = dot1X, tmpY = dot1Y;
             dot1X = dot2X; dot1Y = dot2Y;
