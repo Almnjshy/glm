@@ -70,19 +70,23 @@ export class GameEngine {
         return false;
     }
 
+    private getDims(d: Dir, isDouble: boolean): { w: number, h: number } {
+        const L = 60, W = 30;
+        if (d === 'RIGHT' || d === 'LEFT') {
+            return { w: isDouble ? W : L, h: isDouble ? L : W };
+        } else {
+            return { w: isDouble ? L : W, h: isDouble ? W : L };
+        }
+    }
+
     public playTile(tile: DominoTile, side: 'left' | 'right'): boolean {
-        const L = 60, W = 30; // الطول والعرض
-        const MARGIN = 50;
-        const MAX_X = 800 - MARGIN;
-        const MIN_X = MARGIN;
-        const MAX_Y = 450 - MARGIN; // الحد الأقصى للارتفاع قبل منطقة اليد
-        const MIN_Y = MARGIN;
+        const MAX_X = 780, MIN_X = 20, MAX_Y = 440, MIN_Y = 50;
 
         // أول قطعة
         if (this.placedTiles.length === 0) {
             const isDouble = tile.sideA === tile.sideB;
-            const w = isDouble ? W : L;
-            const h = isDouble ? L : W;
+            const dims = this.getDims('RIGHT', isDouble);
+            const w = dims.w, h = dims.h;
             const x = 400 - w / 2;
             const y = 200 - h / 2;
             
@@ -101,46 +105,43 @@ export class GameEngine {
 
         const isDouble = (inVal === outVal);
         let dir = end.dir;
-        let w = 0, h = 0, x = 0, y = 0;
+        let dims = this.getDims(dir, isDouble);
+        let w = dims.w, h = dims.h;
+        let x = 0, y = 0;
 
-        // دالة مساعدة لحساب الأبعاد
-        const getDims = (d: Dir) => {
-            if (d === 'RIGHT' || d === 'LEFT') return { w: isDouble ? W : L, h: isDouble ? L : W };
-            else return { w: isDouble ? L : W, h: isDouble ? W : L };
-        };
-
-        let dims = getDims(dir);
-        w = dims.w; h = dims.h;
-
-        // الموضع الافتراضي بدون التفاف
+        // الموضع الافتراضي
         if (dir === 'RIGHT') { x = end.x; y = end.y - h / 2; }
         else if (dir === 'LEFT') { x = end.x - w; y = end.y - h / 2; }
         else if (dir === 'DOWN') { x = end.x - w / 2; y = end.y; }
         else if (dir === 'UP') { x = end.x - w / 2; y = end.y - h; }
 
-        // فحص الحدود والالتفاف الصارم
+        // خوارزمية الالتفاف الصارمة (L-Shape)
         if (dir === 'RIGHT' && x + w > MAX_X) {
             dir = 'DOWN';
-            dims = getDims(dir); w = dims.w; h = dims.h;
-            x = end.x - w / 2; y = end.y - W / 2; // محاذاة الحافة العلوية
+            dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
+            x = end.x; 
+            y = end.y - 15; // محاذاة الحافة العلوية للخط
         } else if (dir === 'LEFT' && x < MIN_X) {
             dir = 'UP';
-            dims = getDims(dir); w = dims.w; h = dims.h;
-            x = end.x - w / 2; y = end.y + W / 2 - h; // محاذاة الحافة السفلية
+            dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
+            x = end.x - w; 
+            y = end.y - 15;
         } else if (dir === 'DOWN' && y + h > MAX_Y) {
             dir = 'LEFT';
-            dims = getDims(dir); w = dims.w; h = dims.h;
-            x = end.x + W / 2 - w; y = end.y - h / 2; // محاذاة الحافة اليمنى
+            dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
+            x = end.x - 15 - w; 
+            y = end.y - h;
         } else if (dir === 'UP' && y < MIN_Y) {
             dir = 'RIGHT';
-            dims = getDims(dir); w = dims.w; h = dims.h;
-            x = end.x - W / 2; y = end.y - h / 2; // محاذاة الحافة اليسرى
+            dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
+            x = end.x + 15; 
+            y = end.y;
         }
 
         const pt = this.createPlacedTile(x, y, w, h, isDouble, dir, inVal, outVal);
         this.placedTiles.push(pt);
 
-        // تحديث الطرف الجديد
+        // تحديث الطرف الجديد للطاولة
         let newEndX = 0, newEndY = 0;
         if (dir === 'RIGHT') { newEndX = x + w; newEndY = y + h / 2; }
         else if (dir === 'LEFT') { newEndX = x; newEndY = y + h / 2; }
