@@ -80,8 +80,8 @@ export class GameEngine {
     }
 
     public playTile(tile: DominoTile, side: 'left' | 'right'): boolean {
-        // منطقة آمنة موسعة لمنع خروج القطع من الشاشة
         const MAX_X = 720, MIN_X = 80, MAX_Y = 420, MIN_Y = 80;
+        const W_HALF = 15; // نصف العرض القصير (30/2) لمحاذاة الزوايا بدقة
 
         // أول قطعة
         if (this.placedTiles.length === 0) {
@@ -117,26 +117,27 @@ export class GameEngine {
         else if (dir === 'UP') { x = end.x - w / 2; y = end.y - h; }
 
         // خوارزمية الالتفاف الصارمة (L-Shape)
+        // يتم محاذاة حواف القطعة الجديدة مع حواف القطعة السابقة بدقة لمنع التداخل
         if (dir === 'RIGHT' && x + w > MAX_X) {
             dir = 'DOWN';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
-            x = end.x - w / 2; 
-            y = end.y - h / 4; 
+            x = end.x; 
+            y = end.y + W_HALF; 
         } else if (dir === 'LEFT' && x < MIN_X) {
             dir = 'UP';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
-            x = end.x - w / 2; 
-            y = end.y - h + h / 4; 
+            x = end.x - w; 
+            y = end.y - W_HALF - h; 
         } else if (dir === 'DOWN' && y + h > MAX_Y) {
             dir = 'LEFT';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
-            x = end.x - w + w / 4; 
-            y = end.y - h / 2;
+            x = end.x - W_HALF - w; 
+            y = end.y - h;
         } else if (dir === 'UP' && y < MIN_Y) {
             dir = 'RIGHT';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
-            x = end.x - w / 4; 
-            y = end.y - h / 2;
+            x = end.x + W_HALF; 
+            y = end.y;
         }
 
         const pt = this.createPlacedTile(x, y, w, h, dir, inVal, outVal);
