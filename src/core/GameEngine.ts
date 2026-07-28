@@ -80,7 +80,8 @@ export class GameEngine {
     }
 
     public playTile(tile: DominoTile, side: 'left' | 'right'): boolean {
-        const MAX_X = 780, MIN_X = 20, MAX_Y = 440, MIN_Y = 50;
+        // منطقة آمنة موسعة لمنع خروج القطع من الشاشة
+        const MAX_X = 720, MIN_X = 80, MAX_Y = 420, MIN_Y = 80;
 
         // أول قطعة
         if (this.placedTiles.length === 0) {
@@ -88,9 +89,9 @@ export class GameEngine {
             const dims = this.getDims('RIGHT', isDouble);
             const w = dims.w, h = dims.h;
             const x = 400 - w / 2;
-            const y = 200 - h / 2;
+            const y = 240 - h / 2;
             
-            const pt = this.createPlacedTile(x, y, w, h, isDouble, 'RIGHT', tile.sideA, tile.sideB);
+            const pt = this.createPlacedTile(x, y, w, h, 'RIGHT', tile.sideA, tile.sideB);
             this.placedTiles.push(pt);
             this.leftEnd = { val: tile.sideA, x: x, y: y + h / 2, dir: 'LEFT' };
             this.rightEnd = { val: tile.sideB, x: x + w, y: y + h / 2, dir: 'RIGHT' };
@@ -119,26 +120,26 @@ export class GameEngine {
         if (dir === 'RIGHT' && x + w > MAX_X) {
             dir = 'DOWN';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
-            x = end.x; 
-            y = end.y - 15; // محاذاة الحافة العلوية للخط
+            x = end.x - w / 2; 
+            y = end.y - h / 4; 
         } else if (dir === 'LEFT' && x < MIN_X) {
             dir = 'UP';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
-            x = end.x - w; 
-            y = end.y - 15;
+            x = end.x - w / 2; 
+            y = end.y - h + h / 4; 
         } else if (dir === 'DOWN' && y + h > MAX_Y) {
             dir = 'LEFT';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
-            x = end.x - 15 - w; 
-            y = end.y - h;
+            x = end.x - w + w / 4; 
+            y = end.y - h / 2;
         } else if (dir === 'UP' && y < MIN_Y) {
             dir = 'RIGHT';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
-            x = end.x + 15; 
-            y = end.y;
+            x = end.x - w / 4; 
+            y = end.y - h / 2;
         }
 
-        const pt = this.createPlacedTile(x, y, w, h, isDouble, dir, inVal, outVal);
+        const pt = this.createPlacedTile(x, y, w, h, dir, inVal, outVal);
         this.placedTiles.push(pt);
 
         // تحديث الطرف الجديد للطاولة
@@ -154,31 +155,19 @@ export class GameEngine {
         return true;
     }
 
-    private createPlacedTile(x: number, y: number, w: number, h: number, isDouble: boolean, dir: Dir, inVal: number, outVal: number): PlacedTile {
+    private createPlacedTile(x: number, y: number, w: number, h: number, dir: Dir, inVal: number, outVal: number): PlacedTile {
         let dot1X = 0, dot1Y = 0, dot2X = 0, dot2Y = 0;
         let isVerticalLine = false;
 
-        // حساب مراكز النقاط بدقة رياضية
-        if (dir === 'RIGHT' || dir === 'LEFT') {
-            if (isDouble) {
-                isVerticalLine = false;
-                dot1X = x + w/2; dot1Y = y + h/4;
-                dot2X = x + w/2; dot2Y = y + 3*h/4;
-            } else {
-                isVerticalLine = true;
-                dot1X = x + w/4; dot1Y = y + h/2;
-                dot2X = x + 3*w/4; dot2Y = y + h/2;
-            }
-        } else {
-            if (isDouble) {
-                isVerticalLine = true;
-                dot1X = x + w/4; dot1Y = y + h/2;
-                dot2X = x + 3*w/4; dot2Y = y + h/2;
-            } else {
-                isVerticalLine = false;
-                dot1X = x + w/2; dot1Y = y + h/4;
-                dot2X = x + w/2; dot2Y = y + 3*h/4;
-            }
+        // حساب مراكز النقاط بناءً على الأبعاد فقط (رياضياً صارم)
+        if (w > h) { // قطعة أفقية
+            isVerticalLine = true;
+            dot1X = x + w/4; dot1Y = y + h/2;
+            dot2X = x + 3*w/4; dot2Y = y + h/2;
+        } else { // قطعة عمودية
+            isVerticalLine = false;
+            dot1X = x + w/2; dot1Y = y + h/4;
+            dot2X = x + w/2; dot2Y = y + 3*h/4;
         }
 
         // تبديل النقاط إذا كان الاتجاه معاكساً
