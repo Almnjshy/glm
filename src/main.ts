@@ -38,8 +38,9 @@ function drawDots(ctx: CanvasRenderingContext2D, value: number, cx: number, cy: 
 
 function drawPlacedTile(t: PlacedTile, highlight: boolean = false) {
     if (highlight) {
-        ctx.fillStyle = "rgba(0, 255, 0, 0.4)"; // تظليل أخضر للأطراف الصالحة
-        ctx.fillRect(t.x - 5, t.y - 5, t.w + 10, t.h + 10);
+        // إضاءة خضراء ساطعة للأطراف الصالحة
+        ctx.fillStyle = "rgba(0, 255, 0, 0.5)";
+        ctx.fillRect(t.x - 6, t.y - 6, t.w + 12, t.h + 12);
     }
     
     ctx.fillStyle = "#fff";
@@ -88,7 +89,9 @@ function gameLoop() {
         if (isDragging && draggingTile) {
             const isFirst = index === 0;
             const isLast = index === engine.placedTiles.length - 1;
+            // يضيء الطرف الأيسر إذا كانت القطعة تطابقه
             if (isFirst && engine.leftEnd && draggingTile.hasValue(engine.leftEnd.val)) highlight = true;
+            // يضيء الطرف الأيمن إذا كانت القطعة تطابقه
             if (isLast && engine.rightEnd && draggingTile.hasValue(engine.rightEnd.val)) highlight = true;
         }
         drawPlacedTile(t, highlight);
@@ -116,9 +119,9 @@ function gameLoop() {
         handX += 60; 
     });
 
-    // 4. رسم القطعة المسحوبة (تتبع الماوس)
+    // 4. رسم القطعة المسحوبة (تتبع الماوس بحجم أكبر مع ظل)
     if (isDragging && draggingTile) {
-        ctx.shadowColor = "rgba(0,0,0,0.5)";
+        ctx.shadowColor = "rgba(0,0,0,0.6)";
         ctx.shadowBlur = 15;
         ctx.shadowOffsetY = 5;
         
@@ -131,7 +134,7 @@ function gameLoop() {
     }
 
     // 5. منطق زر السحب
-    let msg = engine.isPlayerTurn ? "اسحب قطعة وضعها بجانب الطرف الصالح (يمين أو يسار)" : "الذكاء الاصطناعي يفكر...";
+    let msg = engine.isPlayerTurn ? "اسحب قطعة وأفلتها في الملعب قرب الطرف المضيء بالأخضر" : "الذكاء الاصطناعي يفكر...";
     
     const needsToDrawOrPass = engine.isPlayerTurn && !engine.canPlayerPlay();
     if (needsToDrawOrPass) {
@@ -213,18 +216,32 @@ function handleEnd(e: MouseEvent | TouchEvent) {
 
     let played = false;
     
-    // محاذاة الأطراف: إذا أفلت القطعة في النصف العلوي من الشاشة (قرب الطاولة)
+    // منطق الإفلات الجديد المغفل (Foolproof):
+    // طالما أن اللاعب أفلت القطعة في النصف العلوي من الشاشة (في الملعب)
     if (mouseY < 450) {
-        const distRight = engine.rightEnd ? Math.hypot(mouseX - engine.rightEnd.x, mouseY - engine.rightEnd.y) : Infinity;
-        const distLeft = engine.leftEnd ? Math.hypot(mouseX - engine.leftEnd.x, mouseY - engine.leftEnd.y) : Infinity;
+        const rEnd = engine.rightEnd;
+        const lEnd = engine.leftEnd;
+        let tryRightFirst = true;
 
-        if (distRight < distLeft && distRight < 100) {
+        // نحدد أي طرف هو الأقرب لمكان الإفلات
+        if (rEnd && lEnd) {
+            const distRight = Math.hypot(mouseX - rEnd.x, mouseY - rEnd.y);
+            const distLeft = Math.hypot(mouseX - lEnd.x, mouseY - lEnd.y);
+            tryRightFirst = distRight < distLeft;
+        }
+
+        // نحاول اللعب في الطرف الأقرب
+        if (tryRightFirst) {
             played = engine.playTile(draggingTile, 'right');
-        } else if (distLeft < 100) {
+            // إذا لم ينجح، نحاول الطرف الآخر فوراً
+            if (!played) played = engine.playTile(draggingTile, 'left');
+        } else {
             played = engine.playTile(draggingTile, 'left');
+            if (!played) played = engine.playTile(draggingTile, 'right');
         }
     }
 
+    // إذا تم اللعب بنجاح، نزيلها من اليد وننهي الدور
     if (played) {
         engine.playerHand.splice(draggingIndex, 1);
         endTurn();
