@@ -9,7 +9,9 @@ const info = document.getElementById('info')!;
 const engine = new GameEngine();
 let selectedTileIndex: number = -1;
 
-// دالة رسم النقاط (تم تحديثها لتناسب القطع الأفقية والعمودية)
+// إحداثيات الكومة لاستخدامها في النقر
+const boneyardX = 700, boneyardY = 20, boneyardW = 50, boneyardH = 90;
+
 function drawDots(ctx: CanvasRenderingContext2D, value: number, cx: number, cy: number) {
     const r = 3;
     const off = 8;
@@ -29,7 +31,6 @@ function drawDots(ctx: CanvasRenderingContext2D, value: number, cx: number, cy: 
     });
 }
 
-// دالة رسم قطعة واحدة على الطاولة
 function drawPlacedTile(t: PlacedTile) {
     const w = t.isVertical ? 40 : 80;
     const h = t.isVertical ? 80 : 40;
@@ -61,13 +62,27 @@ function draw() {
     // رسم القطع على الطاولة
     engine.placedTiles.forEach(t => drawPlacedTile(t));
 
+    // رسم الكومة (Boneyard) في أعلى اليمين
+    ctx.fillStyle = "#444";
+    ctx.fillRect(boneyardX, boneyardY, boneyardW, boneyardH);
+    ctx.strokeStyle = "#222";
+    ctx.lineWidth = 4;
+    ctx.strokeRect(boneyardX, boneyardY, boneyardW, boneyardH);
+    
+    ctx.fillStyle = "white";
+    ctx.font = "12px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("كومة السحب", boneyardX + boneyardW / 2, boneyardY + boneyardH / 2 - 10);
+    ctx.font = "20px bold sans-serif";
+    ctx.fillText(`${engine.boneyard.length}`, boneyardX + boneyardW / 2, boneyardY + boneyardH / 2 + 15);
+
     // رسم يد اللاعب (في الأسفل)
-    let handX = 50;
+    let handX = 20;
     engine.playerHand.forEach((tile, index) => {
         tile.x = handX;
-        tile.y = 450;
-        tile.width = 40;
-        tile.height = 80;
+        tile.y = 480;
+        tile.width = 50;
+        tile.height = 90;
         
         if (index === selectedTileIndex) {
             ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
@@ -76,6 +91,7 @@ function draw() {
         
         ctx.fillStyle = "#fff";
         ctx.strokeStyle = "#000";
+        ctx.lineWidth = 2;
         ctx.fillRect(tile.x, tile.y, tile.width, tile.height);
         ctx.strokeRect(tile.x, tile.y, tile.width, tile.height);
         
@@ -87,10 +103,22 @@ function draw() {
         drawDots(ctx, tile.sideA, tile.x + tile.width/2, tile.y + tile.height/4);
         drawDots(ctx, tile.sideB, tile.x + tile.width/2, tile.y + (tile.height/4)*3);
         
-        handX += 50;
+        handX += 60; 
     });
 
-    info.innerText = engine.isPlayerTurn ? "دورك: اختر قطعة ثم انقر يمين أو يسار الشاشة" : "الذكاء الاصطناعي يفكر...";
+    // معلومات اللعب
+    ctx.fillStyle = "white";
+    ctx.font = "16px sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText(`يدك: ${engine.playerHand.length} | يد الخصم: ${engine.aiHand.length}`, 10, 20);
+    
+    let msg = engine.isPlayerTurn ? "دورك: اختر قطعة ثم انقر يمين أو يسار الشاشة" : "الذكاء الاصطناعي يفكر...";
+    if (engine.isPlayerTurn && !engine.canPlayerPlay() && engine.boneyard.length > 0) {
+        msg = "لا يوجد لديك قطعة صالحة! اضغط على (كومة السحب) لسحب قطعة.";
+    } else if (engine.isPlayerTurn && !engine.canPlayerPlay() && engine.boneyard.length === 0) {
+        msg = "لا توجد قطع للسحب! اضغط على (كومة السحب) لتمرير الدور.";
+    }
+    info.innerText = msg;
 }
 
 canvas.addEventListener('click', (e) => {
@@ -100,6 +128,21 @@ canvas.addEventListener('click', (e) => {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
+    // التحقق إذا نقر اللاعب على الكومة (للسحب أو التمرير)
+    if (x >= boneyardX && x <= boneyardX + boneyardW && y >= boneyardY && y <= boneyardY + boneyardH) {
+        if (!engine.canPlayerPlay()) {
+            if (engine.playerDraw()) {
+                draw(); // تم السحب، تحديث الشاشة
+            } else {
+                // الكومة فارغة، تمرير الدور
+                engine.isPlayerTurn = false;
+                endTurn();
+            }
+        }
+        return;
+    }
+
+    // التحقق إذا نقر على قطعة في يده
     for (let i = 0; i < engine.playerHand.length; i++) {
         const tile = engine.playerHand[i];
         if (x >= tile.x && x <= tile.x + tile.width && y >= tile.y && y <= tile.y + tile.height) {
@@ -109,6 +152,7 @@ canvas.addEventListener('click', (e) => {
         }
     }
 
+    // محاولة اللعب يميناً أو يساراً
     if (selectedTileIndex !== -1 && x > canvas.width / 2) {
         const tile = engine.playerHand[selectedTileIndex];
         if (engine.playTile(tile, 'right')) {
