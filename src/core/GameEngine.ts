@@ -3,10 +3,10 @@ import { DominoTile } from './DominoTile';
 export type Dir = 'RIGHT' | 'LEFT' | 'DOWN' | 'UP';
 
 export interface PlacedTile {
-    inVal: number; outVal: number;
     x: number; y: number; w: number; h: number;
-    inX: number; inY: number; outX: number; outY: number;
     isVerticalLine: boolean;
+    inVal: number; outVal: number;
+    dot1X: number; dot1Y: number; dot2X: number; dot2Y: number;
 }
 
 export interface EndPoint {
@@ -71,27 +71,23 @@ export class GameEngine {
     }
 
     public playTile(tile: DominoTile, side: 'left' | 'right'): boolean {
-        const LONG = 60, SHORT = 30;
-        
-        // أول قطعة توضع في المنتصف
+        const L = 60, W = 30; // الطول والعرض
+        const MARGIN = 50;
+        const MAX_X = 800 - MARGIN;
+        const MIN_X = MARGIN;
+        const MAX_Y = 450 - MARGIN; // الحد الأقصى للارتفاع قبل منطقة اليد
+        const MIN_Y = MARGIN;
+
+        // أول قطعة
         if (this.placedTiles.length === 0) {
             const isDouble = tile.sideA === tile.sideB;
-            const w = isDouble ? SHORT : LONG;
-            const h = isDouble ? LONG : SHORT;
+            const w = isDouble ? W : L;
+            const h = isDouble ? L : W;
             const x = 400 - w / 2;
-            const y = 250 - h / 2;
+            const y = 200 - h / 2;
             
-            let inX = 0, inY = 0, outX = 0, outY = 0, isVert = false;
-            if (w > h) {
-                isVert = true;
-                inX = x + w/4; inY = y + h/2; outX = x + 3*w/4; outY = y + h/2;
-            } else {
-                isVert = false;
-                inX = x + w/2; inY = y + h/4; outX = x + w/2; outY = y + 3*h/4;
-            }
-
-            this.placedTiles.push({ inVal: tile.sideA, outVal: tile.sideB, x, y, w, h, inX, inY, outX, outY, isVerticalLine: isVert });
-            
+            const pt = this.createPlacedTile(x, y, w, h, isDouble, 'RIGHT', tile.sideA, tile.sideB);
+            this.placedTiles.push(pt);
             this.leftEnd = { val: tile.sideA, x: x, y: y + h / 2, dir: 'LEFT' };
             this.rightEnd = { val: tile.sideB, x: x + w, y: y + h / 2, dir: 'RIGHT' };
             return true;
@@ -104,82 +100,94 @@ export class GameEngine {
         else return false;
 
         const isDouble = (inVal === outVal);
-        let w = 0, h = 0, x = 0, y = 0, newDir = end.dir;
+        let dir = end.dir;
+        let w = 0, h = 0, x = 0, y = 0;
 
-        // حساب الحدود وإحداثيات القطعة الجديدة مع خوارزمية الالتفاف الصارمة
-        if (end.dir === 'RIGHT') {
-            w = isDouble ? SHORT : LONG; h = isDouble ? LONG : SHORT;
-            x = end.x; y = end.y - h / 2;
-            if (x + w > 750) { // انعطاف للأسفل
-                w = isDouble ? LONG : SHORT; h = isDouble ? SHORT : LONG;
-                newDir = 'DOWN';
-                x = end.x - w / 2; y = end.y;
-            }
-        } else if (end.dir === 'LEFT') {
-            w = isDouble ? SHORT : LONG; h = isDouble ? LONG : SHORT;
-            x = end.x - w; y = end.y - h / 2;
-            if (x < 50) { // انعطاف للأعلى
-                w = isDouble ? LONG : SHORT; h = isDouble ? SHORT : LONG;
-                newDir = 'UP';
-                x = end.x - w / 2; y = end.y - h;
-            }
-        } else if (end.dir === 'DOWN') {
-            w = isDouble ? LONG : SHORT; h = isDouble ? SHORT : LONG;
-            x = end.x - w / 2; y = end.y;
-            if (y + h > 450) { // انعطاف لليسار
-                w = isDouble ? SHORT : LONG; h = isDouble ? LONG : SHORT;
-                newDir = 'LEFT';
-                x = end.x - w; y = end.y - h / 2;
-            }
-        } else if (end.dir === 'UP') {
-            w = isDouble ? LONG : SHORT; h = isDouble ? SHORT : LONG;
-            x = end.x - w / 2; y = end.y - h;
-            if (y < 50) { // انعطاف لليمين
-                w = isDouble ? SHORT : LONG; h = isDouble ? LONG : SHORT;
-                newDir = 'RIGHT';
-                x = end.x; y = end.y - h / 2;
-            }
+        // دالة مساعدة لحساب الأبعاد
+        const getDims = (d: Dir) => {
+            if (d === 'RIGHT' || d === 'LEFT') return { w: isDouble ? W : L, h: isDouble ? L : W };
+            else return { w: isDouble ? L : W, h: isDouble ? W : L };
+        };
+
+        let dims = getDims(dir);
+        w = dims.w; h = dims.h;
+
+        // الموضع الافتراضي بدون التفاف
+        if (dir === 'RIGHT') { x = end.x; y = end.y - h / 2; }
+        else if (dir === 'LEFT') { x = end.x - w; y = end.y - h / 2; }
+        else if (dir === 'DOWN') { x = end.x - w / 2; y = end.y; }
+        else if (dir === 'UP') { x = end.x - w / 2; y = end.y - h; }
+
+        // فحص الحدود والالتفاف الصارم
+        if (dir === 'RIGHT' && x + w > MAX_X) {
+            dir = 'DOWN';
+            dims = getDims(dir); w = dims.w; h = dims.h;
+            x = end.x - w / 2; y = end.y - W / 2; // محاذاة الحافة العلوية
+        } else if (dir === 'LEFT' && x < MIN_X) {
+            dir = 'UP';
+            dims = getDims(dir); w = dims.w; h = dims.h;
+            x = end.x - w / 2; y = end.y + W / 2 - h; // محاذاة الحافة السفلية
+        } else if (dir === 'DOWN' && y + h > MAX_Y) {
+            dir = 'LEFT';
+            dims = getDims(dir); w = dims.w; h = dims.h;
+            x = end.x + W / 2 - w; y = end.y - h / 2; // محاذاة الحافة اليمنى
+        } else if (dir === 'UP' && y < MIN_Y) {
+            dir = 'RIGHT';
+            dims = getDims(dir); w = dims.w; h = dims.h;
+            x = end.x - W / 2; y = end.y - h / 2; // محاذاة الحافة اليسرى
         }
 
-        // حساب مراكز النقاط بدقة رياضية لمنع التداخل
-        let inX = 0, inY = 0, outX = 0, outY = 0, isVerticalLine = false;
+        const pt = this.createPlacedTile(x, y, w, h, isDouble, dir, inVal, outVal);
+        this.placedTiles.push(pt);
 
-        if (newDir === 'RIGHT' || newDir === 'LEFT') {
-            if (w > h) { // قطعة أفقية تتحرك أفقياً
-                isVerticalLine = true;
-                inX = x + w/4; inY = y + h/2; outX = x + 3*w/4; outY = y + h/2;
-            } else { // قطعة مزدوجة عمودية تتحرك أفقياً
-                isVerticalLine = false;
-                inX = x + w/2; inY = y + h/4; outX = x + w/2; outY = y + 3*h/4;
-            }
-        } else { // UP أو DOWN
-            if (h > w) { // قطعة عمودية تتحرك عمودياً
-                isVerticalLine = false;
-                inX = x + w/2; inY = y + h/4; outX = x + w/2; outY = y + 3*h/4;
-            } else { // قطعة مزدوجة أفقية تتحرك عمودياً
-                isVerticalLine = true;
-                inX = x + w/4; inY = y + h/2; outX = x + 3*w/4; outY = y + h/2;
-            }
-        }
-
-        // تبديل النقاط إذا كان الاتجاه معاكساً (يسار أو أعلى)
-        if (newDir === 'LEFT' || newDir === 'UP') {
-            let tmpX = inX, tmpY = inY; inX = outX; inY = outY; outX = tmpX; outY = tmpY;
-        }
-
-        this.placedTiles.push({ inVal, outVal, x, y, w, h, inX, inY, outX, outY, isVerticalLine });
-
-        // تحديث الطرف الجديد للطاولة
+        // تحديث الطرف الجديد
         let newEndX = 0, newEndY = 0;
-        if (newDir === 'RIGHT') { newEndX = x + w; newEndY = y + h / 2; }
-        else if (newDir === 'LEFT') { newEndX = x; newEndY = y + h / 2; }
-        else if (newDir === 'DOWN') { newEndX = x + w / 2; newEndY = y + h; }
-        else if (newDir === 'UP') { newEndX = x + w / 2; newEndY = y; }
+        if (dir === 'RIGHT') { newEndX = x + w; newEndY = y + h / 2; }
+        else if (dir === 'LEFT') { newEndX = x; newEndY = y + h / 2; }
+        else if (dir === 'DOWN') { newEndX = x + w / 2; newEndY = y + h; }
+        else if (dir === 'UP') { newEndX = x + w / 2; newEndY = y; }
 
-        const newEnd = { val: outVal, x: newEndX, y: newEndY, dir: newDir };
+        const newEnd = { val: outVal, x: newEndX, y: newEndY, dir };
         if (side === 'left') this.leftEnd = newEnd; else this.rightEnd = newEnd;
         
         return true;
+    }
+
+    private createPlacedTile(x: number, y: number, w: number, h: number, isDouble: boolean, dir: Dir, inVal: number, outVal: number): PlacedTile {
+        let dot1X = 0, dot1Y = 0, dot2X = 0, dot2Y = 0;
+        let isVerticalLine = false;
+
+        // حساب مراكز النقاط بدقة رياضية
+        if (dir === 'RIGHT' || dir === 'LEFT') {
+            if (isDouble) {
+                isVerticalLine = false;
+                dot1X = x + w/2; dot1Y = y + h/4;
+                dot2X = x + w/2; dot2Y = y + 3*h/4;
+            } else {
+                isVerticalLine = true;
+                dot1X = x + w/4; dot1Y = y + h/2;
+                dot2X = x + 3*w/4; dot2Y = y + h/2;
+            }
+        } else {
+            if (isDouble) {
+                isVerticalLine = true;
+                dot1X = x + w/4; dot1Y = y + h/2;
+                dot2X = x + 3*w/4; dot2Y = y + h/2;
+            } else {
+                isVerticalLine = false;
+                dot1X = x + w/2; dot1Y = y + h/4;
+                dot2X = x + w/2; dot2Y = y + 3*h/4;
+            }
+        }
+
+        // تبديل النقاط إذا كان الاتجاه معاكساً
+        if (dir === 'LEFT' || dir === 'UP') {
+            let tmpX = dot1X, tmpY = dot1Y;
+            dot1X = dot2X; dot1Y = dot2Y;
+            dot2X = tmpX; dot2Y = tmpY;
+        }
+
+        return { x, y, w, h, isVerticalLine, inVal, outVal, dot1X, dot1Y, dot2X, dot2Y };
     }
 
     public aiTurn(): boolean {
