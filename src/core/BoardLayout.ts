@@ -64,28 +64,27 @@ export class BoardLayout {
         else if (dir === 'DOWN') { x = end.x - w / 2; y = end.y; }
         else if (dir === 'UP') { x = end.x - w / 2; y = end.y - h; }
 
-        // المعادلات الهندسية الصارمة للانعطاف (Strict Edge Alignment)
-        // نحاذي الحواف الخارجية لمنع أي انزياح أو تداخل
+        // خوارزمية الانعطاف الصارمة (Perfect Half-Overlap L-Shape)
         if (dir === 'RIGHT' && x + w > MAX_X) {
             dir = 'DOWN';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
-            x = end.x;  // محاذاة الحافة اليسرى للجديدة مع الحافة اليمنى للقديمة
-            y = end.y - end.parentH / 2; // محاذاة الحافة العلوية
+            x = end.x - w / 2; 
+            y = end.y + end.parentH / 2; 
         } else if (dir === 'LEFT' && x < MIN_X) {
             dir = 'UP';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
-            x = end.x - w; // محاذاة الحافة اليمنى للجديدة مع الحافة اليسرى للقديمة
-            y = end.y - h + end.parentH / 2; // محاذاة الحافة السفلية
+            x = end.x - w / 2; 
+            y = end.y - h - end.parentH / 2; 
         } else if (dir === 'DOWN' && y + h > MAX_Y) {
             dir = 'LEFT';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
-            x = end.x - w + end.parentW / 2; // محاذاة الحافة اليمنى
-            y = end.y; // محاذاة الحافة العلوية للجديدة مع الحافة السفلية للقديمة
+            x = end.x - w / 2; // تم تصحيح الانزياح هنا
+            y = end.y - h / 2;
         } else if (dir === 'UP' && y < MIN_Y) {
             dir = 'RIGHT';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
-            x = end.x; // محاذاة الحافة اليسرى
-            y = end.y - h; // محاذاة الحافة السفلية للجديدة مع الحافة العلوية للقديمة
+            x = end.x - w / 2; // وتصحيح الانزياح هنا
+            y = end.y - h / 2;
         }
 
         this.pushRenderTile(tile, x, y, w, h, dir, inVal, outVal);
