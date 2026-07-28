@@ -49,7 +49,7 @@ function drawPlacedTile(t: PlacedTile) {
     }
     ctx.stroke();
 
-    // رسم النقاط في المراكز المحسوبة
+    // رسم النقاط
     drawDots(ctx, t.inVal, t.dot1X, t.dot1Y, 1);
     drawDots(ctx, t.outVal, t.dot2X, t.dot2Y, 1);
 }
