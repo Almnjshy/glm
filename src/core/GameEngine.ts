@@ -81,7 +81,7 @@ export class GameEngine {
 
     public playTile(tile: DominoTile, side: 'left' | 'right'): boolean {
         const MAX_X = 720, MIN_X = 80, MAX_Y = 420, MIN_Y = 80;
-        const W_HALF = 15; // نصف العرض القصير (30/2) لمحاذاة الزوايا بدقة
+        const L = 60, W = 30, W_HALF = 15;
 
         // أول قطعة
         if (this.placedTiles.length === 0) {
@@ -110,34 +110,34 @@ export class GameEngine {
         let w = dims.w, h = dims.h;
         let x = 0, y = 0;
 
-        // الموضع الافتراضي
+        // الموضع الافتراضي (استقامة الخط)
         if (dir === 'RIGHT') { x = end.x; y = end.y - h / 2; }
         else if (dir === 'LEFT') { x = end.x - w; y = end.y - h / 2; }
         else if (dir === 'DOWN') { x = end.x - w / 2; y = end.y; }
         else if (dir === 'UP') { x = end.x - w / 2; y = end.y - h; }
 
-        // خوارزمية الالتفاف الصارمة (L-Shape)
-        // يتم محاذاة حواف القطعة الجديدة مع حواف القطعة السابقة بدقة لمنع التداخل
+        // خوارزمية الانعطاف الصارمة (L-Shape Perfect Alignment)
+        // يتم حساب الزاوية بحيث تلامس القطعة الجديدة حافة القطعة القديمة وتشكل زاوية 90 درجة
         if (dir === 'RIGHT' && x + w > MAX_X) {
             dir = 'DOWN';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
             x = end.x; 
-            y = end.y + W_HALF; 
+            y = end.y - W_HALF; 
         } else if (dir === 'LEFT' && x < MIN_X) {
             dir = 'UP';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
             x = end.x - w; 
-            y = end.y - W_HALF - h; 
+            y = end.y - L + W_HALF; 
         } else if (dir === 'DOWN' && y + h > MAX_Y) {
             dir = 'LEFT';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
-            x = end.x - W_HALF - w; 
-            y = end.y - h;
+            x = end.x - L + W_HALF; 
+            y = end.y;
         } else if (dir === 'UP' && y < MIN_Y) {
             dir = 'RIGHT';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
-            x = end.x + W_HALF; 
-            y = end.y;
+            x = end.x - W_HALF; 
+            y = end.y - h;
         }
 
         const pt = this.createPlacedTile(x, y, w, h, dir, inVal, outVal);
@@ -160,7 +160,7 @@ export class GameEngine {
         let dot1X = 0, dot1Y = 0, dot2X = 0, dot2Y = 0;
         let isVerticalLine = false;
 
-        // حساب مراكز النقاط بناءً على الأبعاد فقط (رياضياً صارم)
+        // حساب مراكز النقاط بدقة
         if (w > h) { // قطعة أفقية
             isVerticalLine = true;
             dot1X = x + w/4; dot1Y = y + h/2;
@@ -171,7 +171,7 @@ export class GameEngine {
             dot2X = x + w/2; dot2Y = y + 3*h/4;
         }
 
-        // تبديل النقاط إذا كان الاتجاه معاكساً
+        // تبديل النقاط إذا كان الاتجاه معاكساً ليكون الرقم الداخلي دائماً باتجاه الطاولة
         if (dir === 'LEFT' || dir === 'UP') {
             let tmpX = dot1X, tmpY = dot1Y;
             dot1X = dot2X; dot1Y = dot2Y;
