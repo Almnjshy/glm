@@ -73,13 +73,17 @@ export class GameEngine {
         if (!end) return false;
 
         // منطق القلب (أي رقم سيكون للداخل وأي رقم للخارج)
-        let inVal, outVal;
+        let inVal: number = -1;
+        let outVal: number = -1;
+        
         if (tile.sideA === end.value) { inVal = tile.sideA; outVal = tile.sideB; }
         else if (tile.sideB === end.value) { inVal = tile.sideB; outVal = tile.sideA; }
         else return false;
 
         const W = 80, H = 40; // أبعاد القطعة الأفقية
-        let px, py, isVertical = false;
+        let px: number = 0;
+        let py: number = 0;
+        let isVertical = false;
         let newDir = end.dir;
 
         // خوارزمية الالتفاف (Snaking)
