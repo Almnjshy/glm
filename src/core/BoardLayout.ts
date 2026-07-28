@@ -12,7 +12,7 @@ export interface RenderTile {
 
 export interface EndPoint {
     val: number; x: number; y: number; dir: Dir;
-    parentH: number; parentW: number; // أبعاد القطعة السابقة لحساب الانعطاف بدقة
+    parentH: number; parentW: number;
 }
 
 export class BoardLayout {
@@ -46,9 +46,12 @@ export class BoardLayout {
         }
 
         const end = side === 'left' ? this.leftEnd! : this.rightEnd!;
-        const inVal = tile.getOtherSide(end.val);
-        if (inVal === null) return false;
-        const outVal = tile.sideA === inVal ? tile.sideB : tile.sideA;
+        
+        // التصحيح المنطقي: inVal يجب أن يكون هو الرقم المطابق لطرف الطاولة
+        let inVal, outVal;
+        if (tile.sideA === end.val) { inVal = tile.sideA; outVal = tile.sideB; }
+        else if (tile.sideB === end.val) { inVal = tile.sideB; outVal = tile.sideA; }
+        else return false;
 
         const isDouble = (inVal === outVal);
         let dir = end.dir;
@@ -62,27 +65,26 @@ export class BoardLayout {
         else if (dir === 'DOWN') { x = end.x - w / 2; y = end.y; }
         else if (dir === 'UP') { x = end.x - w / 2; y = end.y - h; }
 
-        // خوارزمية الانعطاف الصارمة (Zero Overlap L-Shape)
-        // نستخدم أبعاد القطعة السابقة (parentH, parentW) لضمان عدم التداخل نهائياً
+        // خوارزمية الانعطاف الصارمة
         if (dir === 'RIGHT' && x + w > MAX_X) {
             dir = 'DOWN';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
             x = end.x - w / 2; 
-            y = end.y + end.parentH / 2; // الالتصاق بالحافة السفلية للقطعة السابقة
+            y = end.y + end.parentH / 2; 
         } else if (dir === 'LEFT' && x < MIN_X) {
             dir = 'UP';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
             x = end.x - w / 2; 
-            y = end.y - h - end.parentH / 2; // الالتصاق بالحافة العلوية
+            y = end.y - h - end.parentH / 2; 
         } else if (dir === 'DOWN' && y + h > MAX_Y) {
             dir = 'LEFT';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
-            x = end.x - w - end.parentW / 2; // الالتصاق بالحافة اليسرى
+            x = end.x - w - end.parentW / 2; 
             y = end.y - h / 2;
         } else if (dir === 'UP' && y < MIN_Y) {
             dir = 'RIGHT';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
-            x = end.x + end.parentW / 2; // الالتصاق بالحافة اليمنى
+            x = end.x + end.parentW / 2; 
             y = end.y - h / 2;
         }
 
@@ -106,14 +108,15 @@ export class BoardLayout {
 
         if (w > h) { // قطعة أفقية
             isVerticalLine = true;
-            dot1X = x + w/4; dot1Y = y + h/2;
-            dot2X = x + 3*w/4; dot2Y = y + h/2;
+            dot1X = x + w/4; dot1Y = y + h/2;   // اليسار
+            dot2X = x + 3*w/4; dot2Y = y + h/2; // اليمين
         } else { // قطعة عمودية
             isVerticalLine = false;
-            dot1X = x + w/2; dot1Y = y + h/4;
-            dot2X = x + w/2; dot2Y = y + 3*h/4;
+            dot1X = x + w/2; dot1Y = y + h/4;   // الأعلى
+            dot2X = x + w/2; dot2Y = y + 3*h/4; // الأسفل
         }
 
+        // تبديل النقاط إذا كان الاتجاه معاكساً ليكون الرقم الداخلي دائماً باتجاه الطاولة
         if (dir === 'LEFT' || dir === 'UP') {
             let tmpX = dot1X, tmpY = dot1Y;
             dot1X = dot2X; dot1Y = dot2Y;
