@@ -38,17 +38,18 @@ function drawPlacedTile(t: PlacedTile) {
     ctx.fillRect(t.x, t.y, t.w, t.h);
     ctx.strokeRect(t.x, t.y, t.w, t.h);
 
+    // رسم الخط الفاصل بناءً على الاتجاه الهندسي الصحيح
     ctx.beginPath();
-    if (t.isLineHorizontal) {
-        ctx.moveTo(t.x, t.y + t.h / 2);
-        ctx.lineTo(t.x + t.w, t.y + t.h / 2);
-    } else {
+    if (t.isVerticalLine) {
         ctx.moveTo(t.x + t.w / 2, t.y);
         ctx.lineTo(t.x + t.w / 2, t.y + t.h);
+    } else {
+        ctx.moveTo(t.x, t.y + t.h / 2);
+        ctx.lineTo(t.x + t.w, t.y + t.h / 2);
     }
     ctx.stroke();
 
-    // رسم الرقم الداخلي (inVal) والخارجي (outVal) في الأماكن المحسوبة بدقة
+    // رسم النقاط في المراكز المحسوبة بدقة
     drawDots(ctx, t.inVal, t.inX, t.inY, 1);
     drawDots(ctx, t.outVal, t.outX, t.outY, 1);
 }
@@ -59,7 +60,7 @@ function draw() {
     // 1. رسم القطع على الطاولة
     engine.placedTiles.forEach(t => drawPlacedTile(t));
 
-    // 2. رسم إحصائيات أعلى الشاشة
+    // 2. رسم الإحصائيات
     ctx.fillStyle = "white";
     ctx.font = "16px sans-serif";
     ctx.textAlign = "left";
@@ -107,7 +108,6 @@ function draw() {
         } else {
             msg = "الكومة فارغة ولا تملك قطعة صالحة! اضغط على زر (تمرير الدور).";
         }
-        // رسم الزر
         ctx.fillStyle = "#d9534f";
         ctx.fillRect(drawBtnX, drawBtnY, drawBtnW, drawBtnH);
         ctx.strokeStyle = "#fff";
