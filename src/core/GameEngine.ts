@@ -130,4 +130,24 @@ export class GameEngine {
         }
         return false;
     }
+    // دالة للتحقق إذا كان اللاعب يملك قطعة صالحة للعب
+    public canPlayerPlay(): boolean {
+        if (this.placedTiles.length === 0) return true;
+        for (const tile of this.playerHand) {
+            if ((this.leftEnd && tile.hasValue(this.leftEnd.value)) || 
+                (this.rightEnd && tile.hasValue(this.rightEnd.value))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // دالة لسحب قطعة من الكومة للاعب
+    public playerDraw(): boolean {
+        if (this.boneyard.length > 0) {
+            this.playerHand.push(this.boneyard.pop()!);
+            return true;
+        }
+        return false;
+    }
 }
