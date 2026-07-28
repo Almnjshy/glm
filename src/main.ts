@@ -1,13 +1,18 @@
 import { GameEngine } from './core/GameEngine';
 import { DominoTile } from './core/DominoTile';
-import { PlacedTile } from './core/GameEngine';
+import { PlacedTile, EndPoint } from './core/GameEngine';
 
 const canvas = document.getElementById('gameCanvas') as HTMLCanvasElement;
 const ctx = canvas.getContext('2d')!;
 const info = document.getElementById('info')!;
 
 const engine = new GameEngine();
-let selectedTileIndex: number = -1;
+
+// متغيرات السحب والإفلات
+let isDragging = false;
+let draggingTile: DominoTile | null = null;
+let draggingIndex: number = -1;
+let mouseX = 0, mouseY = 0;
 
 // إحداثيات زر السحب
 const drawBtnX = 650, drawBtnY = 500, drawBtnW = 140, drawBtnH = 50;
@@ -31,14 +36,18 @@ function drawDots(ctx: CanvasRenderingContext2D, value: number, cx: number, cy: 
     });
 }
 
-function drawPlacedTile(t: PlacedTile) {
+function drawPlacedTile(t: PlacedTile, highlight: boolean = false) {
+    if (highlight) {
+        ctx.fillStyle = "rgba(0, 255, 0, 0.4)"; // تظليل أخضر للأطراف الصالحة
+        ctx.fillRect(t.x - 5, t.y - 5, t.w + 10, t.h + 10);
+    }
+    
     ctx.fillStyle = "#fff";
     ctx.strokeStyle = "#000";
     ctx.lineWidth = 2;
     ctx.fillRect(t.x, t.y, t.w, t.h);
     ctx.strokeRect(t.x, t.y, t.w, t.h);
 
-    // رسم الخط الفاصل
     ctx.beginPath();
     if (t.isVerticalLine) {
         ctx.moveTo(t.x + t.w / 2, t.y);
@@ -49,16 +58,41 @@ function drawPlacedTile(t: PlacedTile) {
     }
     ctx.stroke();
 
-    // رسم النقاط
     drawDots(ctx, t.inVal, t.dot1X, t.dot1Y, 1);
     drawDots(ctx, t.outVal, t.dot2X, t.dot2Y, 1);
 }
 
-function draw() {
+function drawTileRaw(tile: DominoTile, x: number, y: number, w: number, h: number, scale: number = 1) {
+    ctx.fillStyle = "#fff";
+    ctx.strokeStyle = "#000";
+    ctx.lineWidth = 2;
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeRect(x, y, w, h);
+
+    ctx.beginPath();
+    ctx.moveTo(x, y + h / 2);
+    ctx.lineTo(x + w, y + h / 2);
+    ctx.stroke();
+
+    drawDots(ctx, tile.sideA, x + w/2, y + h/4, scale);
+    drawDots(ctx, tile.sideB, x + w/2, y + (h/4)*3, scale);
+}
+
+// حلقة الرسم المستمرة (Game Loop)
+function gameLoop() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // 1. رسم القطع على الطاولة
-    engine.placedTiles.forEach(t => drawPlacedTile(t));
+    // 1. رسم القطع على الطاولة مع إبراز الأطراف الصالحة عند السحب
+    engine.placedTiles.forEach((t, index) => {
+        let highlight = false;
+        if (isDragging && draggingTile) {
+            const isFirst = index === 0;
+            const isLast = index === engine.placedTiles.length - 1;
+            if (isFirst && engine.leftEnd && draggingTile.hasValue(engine.leftEnd.val)) highlight = true;
+            if (isLast && engine.rightEnd && draggingTile.hasValue(engine.rightEnd.val)) highlight = true;
+        }
+        drawPlacedTile(t, highlight);
+    });
 
     // 2. رسم الإحصائيات
     ctx.fillStyle = "white";
@@ -71,42 +105,40 @@ function draw() {
     let handX = (800 - (handCount * 60)) / 2;
     
     engine.playerHand.forEach((tile, index) => {
+        if (index === draggingIndex) return; // تخطي القطعة التي يتم سحبها
+
         tile.x = handX;
         tile.y = 490;
         tile.width = 40;
         tile.height = 80;
         
-        if (index === selectedTileIndex) {
-            ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
-            ctx.fillRect(tile.x - 5, tile.y - 5, tile.width + 10, tile.height + 10);
-        }
-        
-        ctx.fillStyle = "#fff";
-        ctx.strokeStyle = "#000";
-        ctx.lineWidth = 2;
-        ctx.fillRect(tile.x, tile.y, tile.width, tile.height);
-        ctx.strokeRect(tile.x, tile.y, tile.width, tile.height);
-        
-        ctx.beginPath();
-        ctx.moveTo(tile.x, tile.y + tile.height / 2);
-        ctx.lineTo(tile.x + tile.width, tile.y + tile.height / 2);
-        ctx.stroke();
-        
-        drawDots(ctx, tile.sideA, tile.x + tile.width/2, tile.y + tile.height/4, 0.8);
-        drawDots(ctx, tile.sideB, tile.x + tile.width/2, tile.y + (tile.height/4)*3, 0.8);
-        
+        drawTileRaw(tile, tile.x, tile.y, tile.width, tile.height, 0.8);
         handX += 60; 
     });
 
-    // 4. منطق زر السحب
-    let msg = engine.isPlayerTurn ? "دورك: اختر قطعة، ثم انقر يمين الشاشة (لليمين) أو يسار الشاشة (لليسار)" : "الذكاء الاصطناعي يفكر...";
+    // 4. رسم القطعة المسحوبة (تتبع الماوس)
+    if (isDragging && draggingTile) {
+        ctx.shadowColor = "rgba(0,0,0,0.5)";
+        ctx.shadowBlur = 15;
+        ctx.shadowOffsetY = 5;
+        
+        const w = 50, h = 100;
+        drawTileRaw(draggingTile, mouseX - w/2, mouseY - h/2, w, h, 1);
+        
+        ctx.shadowColor = "transparent";
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetY = 0;
+    }
+
+    // 5. منطق زر السحب
+    let msg = engine.isPlayerTurn ? "اسحب قطعة وضعها بجانب الطرف الصالح (يمين أو يسار)" : "الذكاء الاصطناعي يفكر...";
     
     const needsToDrawOrPass = engine.isPlayerTurn && !engine.canPlayerPlay();
     if (needsToDrawOrPass) {
         if (engine.boneyard.length > 0) {
             msg = "لا يوجد لديك قطعة صالحة! اضغط على زر (سحب قطعة).";
         } else {
-            msg = "الكومة فارغة ولا تملك قطعة صالحة! اضغط على زر (تمرير الدور).";
+            msg = "الكومة فارغة! اضغط على زر (تمرير الدور).";
         }
         ctx.fillStyle = "#d9534f";
         ctx.fillRect(drawBtnX, drawBtnY, drawBtnW, drawBtnH);
@@ -119,67 +151,110 @@ function draw() {
         ctx.fillText(engine.boneyard.length > 0 ? "سحب قطعة" : "تمرير الدور", drawBtnX + drawBtnW / 2, drawBtnY + 32);
     }
     info.innerText = msg;
+
+    requestAnimationFrame(gameLoop); // استمرار حلقة الرسم
 }
 
-canvas.addEventListener('click', (e) => {
+// --- أحداث الماوس واللمس ---
+
+function handleStart(e: MouseEvent | TouchEvent) {
     if (!engine.isPlayerTurn) return;
-
+    
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    let clientX = 0, clientY = 0;
 
-    // التحقق من نقر زر السحب
-    if (x >= drawBtnX && x <= drawBtnX + drawBtnW && y >= drawBtnY && y <= drawBtnY + drawBtnH) {
+    if (e instanceof TouchEvent) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+    } else {
+        clientX = e.clientX;
+        clientY = e.clientY;
+    }
+
+    mouseX = clientX - rect.left;
+    mouseY = clientY - rect.top;
+
+    // فحص زر السحب
+    if (mouseX >= drawBtnX && mouseX <= drawBtnX + drawBtnW && mouseY >= drawBtnY && mouseY <= drawBtnY + drawBtnH) {
         if (!engine.canPlayerPlay()) {
-            if (engine.playerDraw()) {
-                draw();
-            } else {
-                engine.isPlayerTurn = false;
-                endTurn();
-            }
+            if (engine.playerDraw()) {} else { engine.isPlayerTurn = false; endTurn(); }
         }
         return;
     }
 
-    // التحقق من نقر قطعة في اليد
+    // فحص مسك قطعة من اليد
     for (let i = 0; i < engine.playerHand.length; i++) {
         const tile = engine.playerHand[i];
-        if (x >= tile.x && x <= tile.x + tile.width && y >= tile.y && y <= tile.y + tile.height) {
-            selectedTileIndex = i;
-            draw();
-            return;
+        if (mouseX >= tile.x && mouseX <= tile.x + tile.width && mouseY >= tile.y && mouseY <= tile.y + tile.height) {
+            isDragging = true;
+            draggingTile = tile;
+            draggingIndex = i;
+            break;
+        }
+    }
+}
+
+function handleMove(e: MouseEvent | TouchEvent) {
+    if (!isDragging) return;
+    e.preventDefault(); // منع تمرير الصفحة على الهاتف
+    
+    const rect = canvas.getBoundingClientRect();
+    if (e instanceof TouchEvent) {
+        mouseX = e.touches[0].clientX - rect.left;
+        mouseY = e.touches[0].clientY - rect.top;
+    } else {
+        mouseX = e.clientX - rect.left;
+        mouseY = e.clientY - rect.top;
+    }
+}
+
+function handleEnd(e: MouseEvent | TouchEvent) {
+    if (!isDragging || !draggingTile) return;
+
+    let played = false;
+    
+    // محاذاة الأطراف: إذا أفلت القطعة في النصف العلوي من الشاشة (قرب الطاولة)
+    if (mouseY < 450) {
+        const distRight = engine.rightEnd ? Math.hypot(mouseX - engine.rightEnd.x, mouseY - engine.rightEnd.y) : Infinity;
+        const distLeft = engine.leftEnd ? Math.hypot(mouseX - engine.leftEnd.x, mouseY - engine.leftEnd.y) : Infinity;
+
+        if (distRight < distLeft && distRight < 100) {
+            played = engine.playTile(draggingTile, 'right');
+        } else if (distLeft < 100) {
+            played = engine.playTile(draggingTile, 'left');
         }
     }
 
-    // التحقق من محاولة اللعب
-    if (selectedTileIndex !== -1) {
-        const tile = engine.playerHand[selectedTileIndex];
-        let played = false;
-        if (x > canvas.width / 2) {
-            played = engine.playTile(tile, 'right');
-        } else {
-            played = engine.playTile(tile, 'left');
-        }
-        
-        if (played) {
-            engine.playerHand.splice(selectedTileIndex, 1);
-            selectedTileIndex = -1;
-            endTurn();
-        }
+    if (played) {
+        engine.playerHand.splice(draggingIndex, 1);
+        endTurn();
     }
-});
+
+    // إعادة تعيين حالة السحب
+    isDragging = false;
+    draggingTile = null;
+    draggingIndex = -1;
+}
+
+// ربط الأحداث للماوس
+canvas.addEventListener('mousedown', handleStart);
+canvas.addEventListener('mousemove', handleMove);
+canvas.addEventListener('mouseup', handleEnd);
+
+// ربط الأحداث للشاشات اللمسية (الهواتف)
+canvas.addEventListener('touchstart', handleStart);
+canvas.addEventListener('touchmove', handleMove);
+canvas.addEventListener('touchend', handleEnd);
 
 function endTurn() {
-    draw();
     if (engine.playerHand.length === 0) { alert("لقد فزت!"); return; }
     engine.isPlayerTurn = false;
-    draw();
     setTimeout(() => {
         if (engine.aiHand.length === 0) { alert("فاز الذكاء الاصطناعي!"); return; }
         engine.aiTurn();
         engine.isPlayerTurn = true;
-        draw();
     }, 1500);
 }
 
-draw();
+// بدء حلقة اللعبة
+gameLoop();
