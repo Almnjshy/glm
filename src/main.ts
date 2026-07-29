@@ -13,11 +13,11 @@ let draggingIndex: number = -1;
 let mouseX = 0, mouseY = 0;
 
 // زر السحب في الزاوية اليمنى السفلية
-const drawBtnX = 650, drawBtnY = 580, drawBtnW = 140, drawBtnH = 50;
+const drawBtnX = 620, drawBtnY = 730, drawBtnW = 160, drawBtnH = 50;
 
 function drawDots(ctx: CanvasRenderingContext2D, value: number, cx: number, cy: number, scale: number = 1) {
-    const r = 3 * scale;
-    const off = 8 * scale;
+    const r = 4 * scale;  // تكبير النقاط
+    const off = 10 * scale;
     const positions: Record<number, [number, number][]> = {
         0: [], 1: [[0, 0]], 
         2: [[-off, -off], [off, off]], 
@@ -35,28 +35,27 @@ function drawDots(ctx: CanvasRenderingContext2D, value: number, cx: number, cy: 
 }
 
 function gameLoop() {
-    // 1. رسم الخلفيات (غامق للخارج، فاتح للملعب)
+    // 1. رسم الخلفيات (غامق للخارج، فاتح للملعب - المربع الأحمر)
     ctx.fillStyle = "#1a472a"; // غامق
-    ctx.fillRect(0, 0, 800, 650);
+    ctx.fillRect(0, 0, 800, 800);
     
     ctx.fillStyle = "#2d6a4f"; // فاتح (الملعب)
-    ctx.fillRect(50, 110, 700, 350); // x, y, w, h
+    ctx.fillRect(120, 120, 560, 560); 
 
-    // 2. رسم قطع الخصم (في الأعلى، مقلوبة الظهر)
+    // 2. رسم قطع الخصم (في الأعلى، المستطيل الأبيض العلوي)
     const aiCount = engine.aiHand.length;
-    const aW = 35, aH = 70, aS = 45;
+    const aW = 50, aH = 100, aS = 60;
     let aiX = (800 - (aiCount * aS)) / 2;
     for (let i = 0; i < aiCount; i++) {
-        ctx.fillStyle = "#34495e"; // لون ظهر القطعة
+        ctx.fillStyle = "#34495e"; 
         ctx.strokeStyle = "#2c3e50";
         ctx.lineWidth = 2;
         ctx.fillRect(aiX + i * aS, 20, aW, aH);
         ctx.strokeRect(aiX + i * aS, 20, aW, aH);
         
-        // رسم نقطة زرقاء في المنتصف لتدل على أنه ظهر
         ctx.fillStyle = "#7f8c8d";
         ctx.beginPath();
-        ctx.arc(aiX + i * aS + aW/2, 20 + aH/2, 6, 0, Math.PI * 2);
+        ctx.arc(aiX + i * aS + aW/2, 20 + aH/2, 8, 0, Math.PI * 2);
         ctx.fill();
     }
 
@@ -99,18 +98,18 @@ function gameLoop() {
     ctx.fillStyle = "white";
     ctx.font = "16px sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText(`قطع الخصم: ${engine.playerHand.length} | قطعك: ${engine.playerHand.length} | الكومة: ${engine.boneyard.length}`, 60, 100);
+    ctx.fillText(`قطع الخصم: ${engine.aiHand.length} | قطعك: ${engine.playerHand.length} | الكومة: ${engine.boneyard.length}`, 130, 110);
 
-    // 5. رسم قطع اللاعب (في الأسفل خارج الملعب)
+    // 5. رسم قطع اللاعب (في الأسفل، المستطيل الأبيض السفلي)
     const pCount = engine.playerHand.length;
-    const pW = 40, pH = 80, pS = 50;
+    const pW = 50, pH = 100, pS = 60;
     let pX = (800 - (pCount * pS)) / 2;
     
     engine.playerHand.forEach((tile, index) => {
         if (index === draggingIndex) return;
 
         const x = pX + index * pS;
-        const y = 480;
+        const y = 670; // وضع القطع في الأسفل
         
         ctx.fillStyle = "#fff";
         ctx.strokeStyle = "#000";
@@ -123,8 +122,8 @@ function gameLoop() {
         ctx.lineTo(x + pW, y + pH / 2);
         ctx.stroke();
         
-        drawDots(ctx, tile.sideA, x + pW/2, y + pH/4, 0.8);
-        drawDots(ctx, tile.sideB, x + pW/2, y + (pH/4)*3, 0.8);
+        drawDots(ctx, tile.sideA, x + pW/2, y + pH/4, 1);
+        drawDots(ctx, tile.sideB, x + pW/2, y + (pH/4)*3, 1);
         
         (tile as any).bounds = { x, y, w: pW, h: pH };
     });
@@ -135,7 +134,7 @@ function gameLoop() {
         ctx.shadowBlur = 15;
         ctx.shadowOffsetY = 5;
         
-        const w = 50, h = 100;
+        const w = 60, h = 120; // تكبير القطعة المسحوبة قليلاً
         ctx.fillStyle = "#fff";
         ctx.strokeStyle = "#000";
         ctx.lineWidth = 2;
@@ -147,8 +146,8 @@ function gameLoop() {
         ctx.lineTo(mouseX + w/2, mouseY);
         ctx.stroke();
         
-        drawDots(ctx, draggingTile.sideA, mouseX, mouseY - h/4, 1);
-        drawDots(ctx, draggingTile.sideB, mouseX, mouseY + h/4, 1);
+        drawDots(ctx, draggingTile.sideA, mouseX, mouseY - h/4, 1.2);
+        drawDots(ctx, draggingTile.sideB, mouseX, mouseY + h/4, 1.2);
         
         ctx.shadowColor = "transparent";
         ctx.shadowBlur = 0;
