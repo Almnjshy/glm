@@ -64,28 +64,28 @@ export class BoardLayout {
         else if (dir === 'DOWN') { x = end.x - w / 2; y = end.y; }
         else if (dir === 'UP') { x = end.x - w / 2; y = end.y - h; }
 
-        // خوارزمية الانعطاف (Standard Corner Alignment)
-        // تعتمد على مركز النقاط (Pips) لضمان انخفاض القطعة للنهاية ثم انزياحها لتكون موازية للصف
+        // خوارزمية الزاوية النظيفة (Clean L-Shape Corner)
+        // تطبيق حرفي لشرحك: الانخفاض للنهاية ثم الانزياح لتشكيل زاوية موازية للصف
         if (dir === 'RIGHT' && x + w > MAX_X) {
             dir = 'DOWN';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
-            x = end.x - end.parentW / 4 - w / 2; 
-            y = end.y - h / 4; 
+            x = end.x - w;             // انزياح لليسار: اصطفاف الحافة اليمنى للجديدة مع اليمنى للقديمة
+            y = end.y + end.parentH / 2; // انخفاض للنهاية: ملامسة الحافة السفلية للقطعة السابقة
         } else if (dir === 'LEFT' && x < MIN_X) {
             dir = 'UP';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
-            x = end.x + end.parentW / 4 - w / 2; 
-            y = end.y - 3 * h / 4; 
+            x = end.x;                  // انزياح لليمين: اصطفاف الحافة اليسرى للجديدة مع اليسرى للقديمة
+            y = end.y - end.parentH / 2 - h; // ارتفاع للنهاية: ملامسة الحافة العلوية للقطعة السابقة
         } else if (dir === 'DOWN' && y + h > MAX_Y) {
             dir = 'LEFT';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
-            x = end.x - 3 * w / 4; 
-            y = end.y - end.parentH / 4 - h / 2;
+            x = end.x - w - end.parentW / 2; // انزياح لليسار: ملامسة الحافة اليسرى للقطعة السابقة
+            y = end.y - h;                   // انخفاض للنهاية: اصطفاف الحافة السفلية للجديدة مع السفلية للقديمة
         } else if (dir === 'UP' && y < MIN_Y) {
             dir = 'RIGHT';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
-            x = end.x - w / 4; 
-            y = end.y + end.parentH / 4 - h / 2;
+            x = end.x + end.parentW / 2;     // انزياح لليمين: ملامسة الحافة اليمنى للقطعة السابقة
+            y = end.y;                       // ارتفاع للنهاية: اصطفاف الحافة العلوية للجديدة مع العلوية للقديمة
         }
 
         this.pushRenderTile(tile, x, y, w, h, dir, inVal, outVal);
