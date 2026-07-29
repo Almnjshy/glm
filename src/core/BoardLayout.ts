@@ -30,15 +30,15 @@ export class BoardLayout {
     }
 
     public addTile(tile: DominoTile, side: 'left' | 'right'): boolean {
-        // حدود الملعب المستطيل (طولي)
-        const MAX_X = 650, MIN_X = 100, MAX_Y = 950, MIN_Y = 200;
+        // حدود الملعب المستطيل (طولي جداً)
+        const MAX_X = 750, MIN_X = 100, MAX_Y = 1400, MIN_Y = 250;
 
         if (this.renderTiles.length === 0) {
             const isDouble = tile.isDouble();
             const dims = this.getDims('RIGHT', isDouble);
             const w = dims.w, h = dims.h;
-            const x = 375 - w / 2; // منتصف العرض (750/2)
-            const y = 550 - h / 2; // منتصف الارتفاع (1100/2)
+            const x = 425 - w / 2; // منتصف العرض (850/2)
+            const y = 825 - h / 2; // منتصف الارتفاع (1700/2)
             this.pushRenderTile(tile, x, y, w, h, 'RIGHT', tile.sideA, tile.sideB);
             this.leftEnd = { val: tile.sideA, x: x, y: y + h / 2, dir: 'LEFT', parentH: h, parentW: w };
             this.rightEnd = { val: tile.sideB, x: x + w, y: y + h / 2, dir: 'RIGHT', parentH: h, parentW: w };
