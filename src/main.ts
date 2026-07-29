@@ -12,12 +12,12 @@ let draggingTile: DominoTile | null = null;
 let draggingIndex: number = -1;
 let mouseX = 0, mouseY = 0;
 
-// زر السحب
-const drawBtnX = 570, drawBtnY = 1020, drawBtnW = 160, drawBtnH = 50;
+// زر السحب في الزاوية اليمنى السفلية
+const drawBtnX = 650, drawBtnY = 1620, drawBtnW = 180, drawBtnH = 60;
 
 function drawDots(ctx: CanvasRenderingContext2D, value: number, cx: number, cy: number, scale: number = 1) {
-    const r = 5 * scale;
-    const off = 12 * scale;
+    const r = 6 * scale;  // تكبير النقاط
+    const off = 14 * scale;
     const positions: Record<number, [number, number][]> = {
         0: [], 1: [[0, 0]], 
         2: [[-off, -off], [off, off]], 
@@ -37,15 +37,15 @@ function drawDots(ctx: CanvasRenderingContext2D, value: number, cx: number, cy: 
 function gameLoop() {
     // 1. رسم الخلفيات
     ctx.fillStyle = "#1a472a"; // غامق
-    ctx.fillRect(0, 0, 750, 1100);
+    ctx.fillRect(0, 0, 850, 1700);
     
     ctx.fillStyle = "#2d6a4f"; // فاتح (الملعب المستطيل الطولي)
-    ctx.fillRect(100, 200, 550, 750); 
+    ctx.fillRect(50, 200, 750, 1250); 
 
     // 2. رسم قطع الخصم (في الأعلى)
     const aiCount = engine.aiHand.length;
-    const aW = 50, aH = 100, aS = 60;
-    let aiX = (750 - (aiCount * aS)) / 2;
+    const aW = 60, aH = 120, aS = 70;
+    let aiX = (850 - (aiCount * aS)) / 2;
     for (let i = 0; i < aiCount; i++) {
         ctx.fillStyle = "#34495e"; 
         ctx.strokeStyle = "#2c3e50";
@@ -55,7 +55,7 @@ function gameLoop() {
         
         ctx.fillStyle = "#7f8c8d";
         ctx.beginPath();
-        ctx.arc(aiX + i * aS + aW/2, 50 + aH/2, 8, 0, Math.PI * 2);
+        ctx.arc(aiX + i * aS + aW/2, 50 + aH/2, 10, 0, Math.PI * 2);
         ctx.fill();
     }
 
@@ -71,7 +71,7 @@ function gameLoop() {
         
         if (highlight) {
             ctx.fillStyle = "rgba(0, 255, 0, 0.5)";
-            ctx.fillRect(t.x - 6, t.y - 6, t.w + 12, t.h + 12);
+            ctx.fillRect(t.x - 8, t.y - 8, t.w + 16, t.h + 16);
         }
         
         ctx.fillStyle = "#fff";
@@ -90,26 +90,26 @@ function gameLoop() {
         }
         ctx.stroke();
 
-        drawDots(ctx, t.inVal, t.dot1X, t.dot1Y, 1);
-        drawDots(ctx, t.outVal, t.dot2X, t.dot2Y, 1);
+        drawDots(ctx, t.inVal, t.dot1X, t.dot1Y, 1.2);
+        drawDots(ctx, t.outVal, t.dot2X, t.dot2Y, 1.2);
     });
 
     // 4. رسم إحصائيات أعلى الملعب
     ctx.fillStyle = "white";
-    ctx.font = "18px sans-serif";
+    ctx.font = "22px sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText(`قطع الخصم: ${engine.aiHand.length} | قطعك: ${engine.playerHand.length} | الكومة: ${engine.boneyard.length}`, 110, 190);
+    ctx.fillText(`قطع الخصم: ${engine.aiHand.length} | قطعك: ${engine.playerHand.length} | الكومة: ${engine.boneyard.length}`, 60, 190);
 
     // 5. رسم قطع اللاعب (في الأسفل)
     const pCount = engine.playerHand.length;
-    const pW = 55, pH = 110, pS = 65;
-    let pX = (750 - (pCount * pS)) / 2;
+    const pW = 65, pH = 130, pS = 75;
+    let pX = (850 - (pCount * pS)) / 2;
     
     engine.playerHand.forEach((tile, index) => {
         if (index === draggingIndex) return;
 
         const x = pX + index * pS;
-        const y = 950; // وضع القطع في الأسفل
+        const y = 1480; // وضع القطع في الأسفل
         
         ctx.fillStyle = "#fff";
         ctx.strokeStyle = "#000";
@@ -122,8 +122,8 @@ function gameLoop() {
         ctx.lineTo(x + pW, y + pH / 2);
         ctx.stroke();
         
-        drawDots(ctx, tile.sideA, x + pW/2, y + pH/4, 1.1);
-        drawDots(ctx, tile.sideB, x + pW/2, y + (pH/4)*3, 1.1);
+        drawDots(ctx, tile.sideA, x + pW/2, y + pH/4, 1.3);
+        drawDots(ctx, tile.sideB, x + pW/2, y + (pH/4)*3, 1.3);
         
         (tile as any).bounds = { x, y, w: pW, h: pH };
     });
@@ -131,10 +131,10 @@ function gameLoop() {
     // 6. رسم القطعة المسحوبة
     if (isDragging && draggingTile) {
         ctx.shadowColor = "rgba(0,0,0,0.6)";
-        ctx.shadowBlur = 15;
-        ctx.shadowOffsetY = 5;
+        ctx.shadowBlur = 20;
+        ctx.shadowOffsetY = 8;
         
-        const w = 65, h = 130;
+        const w = 75, h = 150; // تكبير القطعة المسحوبة
         ctx.fillStyle = "#fff";
         ctx.strokeStyle = "#000";
         ctx.lineWidth = 2;
@@ -146,8 +146,8 @@ function gameLoop() {
         ctx.lineTo(mouseX + w/2, mouseY);
         ctx.stroke();
         
-        drawDots(ctx, draggingTile.sideA, mouseX, mouseY - h/4, 1.3);
-        drawDots(ctx, draggingTile.sideB, mouseX, mouseY + h/4, 1.3);
+        drawDots(ctx, draggingTile.sideA, mouseX, mouseY - h/4, 1.5);
+        drawDots(ctx, draggingTile.sideB, mouseX, mouseY + h/4, 1.5);
         
         ctx.shadowColor = "transparent";
         ctx.shadowBlur = 0;
@@ -170,9 +170,9 @@ function gameLoop() {
         ctx.lineWidth = 2;
         ctx.strokeRect(drawBtnX, drawBtnY, drawBtnW, drawBtnH);
         ctx.fillStyle = "white";
-        ctx.font = "20px sans-serif";
+        ctx.font = "24px sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText(engine.boneyard.length > 0 ? "سحب قطعة" : "تمرير الدور", drawBtnX + drawBtnW / 2, drawBtnY + 32);
+        ctx.fillText(engine.boneyard.length > 0 ? "سحب قطعة" : "تمرير الدور", drawBtnX + drawBtnW / 2, drawBtnY + 38);
     }
     info.innerText = msg;
 
