@@ -21,7 +21,7 @@ export class BoardLayout {
     public rightEnd: EndPoint | null = null;
 
     private getDims(d: Dir, isDouble: boolean): { w: number, h: number } {
-        const L = 90, W = 45; // تكبير الأحجار بشكل ملحوظ
+        const L = 90, W = 45;
         if (d === 'RIGHT' || d === 'LEFT') {
             return { w: isDouble ? W : L, h: isDouble ? L : W };
         } else {
@@ -30,15 +30,15 @@ export class BoardLayout {
     }
 
     public addTile(tile: DominoTile, side: 'left' | 'right'): boolean {
-        // حدود الملعب المستطيل (عرضي)
-        const MAX_X = 1000, MIN_X = 100, MAX_Y = 600, MIN_Y = 150;
+        // حدود الملعب المستطيل (طولي)
+        const MAX_X = 650, MIN_X = 100, MAX_Y = 950, MIN_Y = 200;
 
         if (this.renderTiles.length === 0) {
             const isDouble = tile.isDouble();
             const dims = this.getDims('RIGHT', isDouble);
             const w = dims.w, h = dims.h;
-            const x = 550 - w / 2; // منتصف العرض (1100/2)
-            const y = 375 - h / 2; // منتصف الارتفاع (750/2)
+            const x = 375 - w / 2; // منتصف العرض (750/2)
+            const y = 550 - h / 2; // منتصف الارتفاع (1100/2)
             this.pushRenderTile(tile, x, y, w, h, 'RIGHT', tile.sideA, tile.sideB);
             this.leftEnd = { val: tile.sideA, x: x, y: y + h / 2, dir: 'LEFT', parentH: h, parentW: w };
             this.rightEnd = { val: tile.sideB, x: x + w, y: y + h / 2, dir: 'RIGHT', parentH: h, parentW: w };
