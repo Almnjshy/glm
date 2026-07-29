@@ -12,6 +12,7 @@ export interface RenderTile {
 
 export interface EndPoint {
     val: number; x: number; y: number; dir: Dir;
+    parentH: number; parentW: number;
 }
 
 export class BoardLayout {
@@ -39,8 +40,8 @@ export class BoardLayout {
             const x = 400 - w / 2;
             const y = 240 - h / 2;
             this.pushRenderTile(tile, x, y, w, h, 'RIGHT', tile.sideA, tile.sideB);
-            this.leftEnd = { val: tile.sideA, x: x, y: y + h / 2, dir: 'LEFT' };
-            this.rightEnd = { val: tile.sideB, x: x + w, y: y + h / 2, dir: 'RIGHT' };
+            this.leftEnd = { val: tile.sideA, x: x, y: y + h / 2, dir: 'LEFT', parentH: h, parentW: w };
+            this.rightEnd = { val: tile.sideB, x: x + w, y: y + h / 2, dir: 'RIGHT', parentH: h, parentW: w };
             return true;
         }
 
@@ -57,46 +58,46 @@ export class BoardLayout {
         let w = dims.w, h = dims.h;
         let x = 0, y = 0;
 
-        // 1. الموضع الافتراضي (استقامة الخط)
+        // الموضع الافتراضي (استقامة الخط)
         if (dir === 'RIGHT') { x = end.x; y = end.y - h / 2; }
         else if (dir === 'LEFT') { x = end.x - w; y = end.y - h / 2; }
         else if (dir === 'DOWN') { x = end.x - w / 2; y = end.y; }
         else if (dir === 'UP') { x = end.x - w / 2; y = end.y - h; }
 
-        // 2. الانعطاف القياسي العالمي (Standard 15x15 Corner Overlap)
-        // المحاذاة تتم بناءً على مركز الحافة المكشوفة لضمان اتصال النقاط بصرياً
+        // خوارزمية الانعطاف (Standard Corner Alignment)
+        // تعتمد على مركز النقاط (Pips) لضمان انخفاض القطعة للنهاية ثم انزياحها لتكون موازية للصف
         if (dir === 'RIGHT' && x + w > MAX_X) {
             dir = 'DOWN';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
-            x = end.x - w / 2; 
-            y = end.y; 
+            x = end.x - end.parentW / 4 - w / 2; 
+            y = end.y - h / 4; 
         } else if (dir === 'LEFT' && x < MIN_X) {
             dir = 'UP';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
-            x = end.x - w / 2; 
-            y = end.y - h; 
+            x = end.x + end.parentW / 4 - w / 2; 
+            y = end.y - 3 * h / 4; 
         } else if (dir === 'DOWN' && y + h > MAX_Y) {
             dir = 'LEFT';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
-            x = end.x - w; 
-            y = end.y - h / 2;
+            x = end.x - 3 * w / 4; 
+            y = end.y - end.parentH / 4 - h / 2;
         } else if (dir === 'UP' && y < MIN_Y) {
             dir = 'RIGHT';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
-            x = end.x; 
-            y = end.y - h / 2;
+            x = end.x - w / 4; 
+            y = end.y + end.parentH / 4 - h / 2;
         }
 
         this.pushRenderTile(tile, x, y, w, h, dir, inVal, outVal);
 
-        // 3. تحديث الأطراف
+        // تحديث الأطراف
         let newEndX = 0, newEndY = 0;
         if (dir === 'RIGHT') { newEndX = x + w; newEndY = y + h / 2; }
         else if (dir === 'LEFT') { newEndX = x; newEndY = y + h / 2; }
         else if (dir === 'DOWN') { newEndX = x + w / 2; newEndY = y + h; }
         else if (dir === 'UP') { newEndX = x + w / 2; newEndY = y; }
 
-        const newEnd = { val: outVal, x: newEndX, y: newEndY, dir };
+        const newEnd = { val: outVal, x: newEndX, y: newEndY, dir, parentH: h, parentW: w };
         if (side === 'left') this.leftEnd = newEnd; else this.rightEnd = newEnd;
         return true;
     }
