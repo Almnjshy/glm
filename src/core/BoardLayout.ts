@@ -21,7 +21,7 @@ export class BoardLayout {
     public rightEnd: EndPoint | null = null;
 
     private getDims(d: Dir, isDouble: boolean): { w: number, h: number } {
-        const L = 60, W = 30;
+        const L = 80, W = 40; // تم تكبير الأحجار
         if (d === 'RIGHT' || d === 'LEFT') {
             return { w: isDouble ? W : L, h: isDouble ? L : W };
         } else {
@@ -30,15 +30,15 @@ export class BoardLayout {
     }
 
     public addTile(tile: DominoTile, side: 'left' | 'right'): boolean {
-        // تصغير الملعب ليبقى داخل المستطيل الفاتح
-        const MAX_X = 700, MIN_X = 100, MAX_Y = 420, MIN_Y = 140;
+        // حدود الملعب (المربع الأحمر)
+        const MAX_X = 680, MIN_X = 120, MAX_Y = 680, MIN_Y = 120;
 
         if (this.renderTiles.length === 0) {
             const isDouble = tile.isDouble();
             const dims = this.getDims('RIGHT', isDouble);
             const w = dims.w, h = dims.h;
             const x = 400 - w / 2;
-            const y = 280 - h / 2; // رفع البداية قليلاً لتكون في منتصف الملعب الجديد
+            const y = 400 - h / 2; // المنتصف تماماً
             this.pushRenderTile(tile, x, y, w, h, 'RIGHT', tile.sideA, tile.sideB);
             this.leftEnd = { val: tile.sideA, x: x, y: y + h / 2, dir: 'LEFT', parentH: h, parentW: w };
             this.rightEnd = { val: tile.sideB, x: x + w, y: y + h / 2, dir: 'RIGHT', parentH: h, parentW: w };
@@ -63,7 +63,7 @@ export class BoardLayout {
         else if (dir === 'DOWN') { x = end.x - w / 2; y = end.y; }
         else if (dir === 'UP') { x = end.x - w / 2; y = end.y - h; }
 
-        // خوارزمية الزاوية النظيفة (كما اتفقنا عليها سابقاً)
+        // خوارزمية الزاوية النظيفة (بنفس القاعدة السابقة)
         if (dir === 'RIGHT' && x + w > MAX_X) {
             dir = 'DOWN';
             dims = this.getDims(dir, isDouble); w = dims.w; h = dims.h;
