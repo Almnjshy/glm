@@ -12,7 +12,8 @@ let draggingTile: DominoTile | null = null;
 let draggingIndex: number = -1;
 let mouseX = 0, mouseY = 0;
 
-const drawBtnX = 650, drawBtnY = 500, drawBtnW = 140, drawBtnH = 50;
+// زر السحب في الزاوية اليمنى السفلية
+const drawBtnX = 650, drawBtnY = 580, drawBtnW = 140, drawBtnH = 50;
 
 function drawDots(ctx: CanvasRenderingContext2D, value: number, cx: number, cy: number, scale: number = 1) {
     const r = 3 * scale;
@@ -34,9 +35,32 @@ function drawDots(ctx: CanvasRenderingContext2D, value: number, cx: number, cy: 
 }
 
 function gameLoop() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // 1. رسم الخلفيات (غامق للخارج، فاتح للملعب)
+    ctx.fillStyle = "#1a472a"; // غامق
+    ctx.fillRect(0, 0, 800, 650);
+    
+    ctx.fillStyle = "#2d6a4f"; // فاتح (الملعب)
+    ctx.fillRect(50, 110, 700, 350); // x, y, w, h
 
-    // 1. رسم القطع على الطاولة (تأتي جاهزة من BoardLayout)
+    // 2. رسم قطع الخصم (في الأعلى، مقلوبة الظهر)
+    const aiCount = engine.aiHand.length;
+    const aW = 35, aH = 70, aS = 45;
+    let aiX = (800 - (aiCount * aS)) / 2;
+    for (let i = 0; i < aiCount; i++) {
+        ctx.fillStyle = "#34495e"; // لون ظهر القطعة
+        ctx.strokeStyle = "#2c3e50";
+        ctx.lineWidth = 2;
+        ctx.fillRect(aiX + i * aS, 20, aW, aH);
+        ctx.strokeRect(aiX + i * aS, 20, aW, aH);
+        
+        // رسم نقطة زرقاء في المنتصف لتدل على أنه ظهر
+        ctx.fillStyle = "#7f8c8d";
+        ctx.beginPath();
+        ctx.arc(aiX + i * aS + aW/2, 20 + aH/2, 6, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // 3. رسم القطع على الطاولة
     engine.layout.renderTiles.forEach((t, index) => {
         let highlight = false;
         if (isDragging && draggingTile) {
@@ -71,41 +95,41 @@ function gameLoop() {
         drawDots(ctx, t.outVal, t.dot2X, t.dot2Y, 1);
     });
 
-    // 2. رسم الإحصائيات
+    // 4. رسم إحصائيات أعلى الملعب
     ctx.fillStyle = "white";
     ctx.font = "16px sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText(`يدك: ${engine.playerHand.length} | يد الخصم: ${engine.aiHand.length} | الكومة: ${engine.boneyard.length}`, 10, 20);
+    ctx.fillText(`قطع الخصم: ${engine.playerHand.length} | قطعك: ${engine.playerHand.length} | الكومة: ${engine.boneyard.length}`, 60, 100);
 
-    // 3. رسم يد اللاعب
-    const handCount = engine.playerHand.length;
-    let handX = (800 - (handCount * 60)) / 2;
+    // 5. رسم قطع اللاعب (في الأسفل خارج الملعب)
+    const pCount = engine.playerHand.length;
+    const pW = 40, pH = 80, pS = 50;
+    let pX = (800 - (pCount * pS)) / 2;
     
     engine.playerHand.forEach((tile, index) => {
         if (index === draggingIndex) return;
 
-        const x = handX, y = 490, w = 40, h = 80;
+        const x = pX + index * pS;
+        const y = 480;
         
         ctx.fillStyle = "#fff";
         ctx.strokeStyle = "#000";
         ctx.lineWidth = 2;
-        ctx.fillRect(x, y, w, h);
-        ctx.strokeRect(x, y, w, h);
+        ctx.fillRect(x, y, pW, pH);
+        ctx.strokeRect(x, y, pW, pH);
         
         ctx.beginPath();
-        ctx.moveTo(x, y + h / 2);
-        ctx.lineTo(x + w, y + h / 2);
+        ctx.moveTo(x, y + pH / 2);
+        ctx.lineTo(x + pW, y + pH / 2);
         ctx.stroke();
         
-        drawDots(ctx, tile.sideA, x + w/2, y + h/4, 0.8);
-        drawDots(ctx, tile.sideB, x + w/2, y + (h/4)*3, 0.8);
+        drawDots(ctx, tile.sideA, x + pW/2, y + pH/4, 0.8);
+        drawDots(ctx, tile.sideB, x + pW/2, y + (pH/4)*3, 0.8);
         
-        // تخزين الإحداثيات للاستخدام في السحب
-        (tile as any).bounds = { x, y, w, h };
-        handX += 60; 
+        (tile as any).bounds = { x, y, w: pW, h: pH };
     });
 
-    // 4. رسم القطعة المسحوبة
+    // 6. رسم القطعة المسحوبة
     if (isDragging && draggingTile) {
         ctx.shadowColor = "rgba(0,0,0,0.6)";
         ctx.shadowBlur = 15;
@@ -131,7 +155,7 @@ function gameLoop() {
         ctx.shadowOffsetY = 0;
     }
 
-    // 5. منطق زر السحب
+    // 7. منطق زر السحب
     let msg = engine.isPlayerTurn ? "اسحب قطعة وأفلتها قرب الطرف المضيء بالأخضر" : "الذكاء الاصطناعي يفكر...";
     
     const needsToDrawOrPass = engine.isPlayerTurn && !engine.canPlayerPlay();
